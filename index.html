@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>間取り図 照明シミュレーター</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -192,70 +192,90 @@
     }
 
     function clampPan(){
-        // コンテナからはみ出しすぎないように制限
+        // ズーム率1以下のときはclampしない（元の位置を保持）
+        if(vpScale<=1.0){ return; }
+        // ズーム時：画像がコンテナの外に出すぎないよう制限
         const cw=mapContainer.clientWidth, ch=mapContainer.clientHeight;
         const ww=cw*vpScale, wh=ch*vpScale;
-        // 右端・下端が見えなくなりすぎない程度に制限
-        vpX=Math.min(cw*0.8, Math.max(vpX, cw-ww-cw*0.8));
-        vpY=Math.min(ch*0.8, Math.max(vpY, ch-wh-ch*0.8));
+        const margin=50; // 少し余裕を持たせる
+        vpX=Math.min(margin, Math.max(vpX, cw-ww-margin));
+        vpY=Math.min(margin, Math.max(vpY, ch-wh-margin));
     }
 
     function setupPinchZoom(){
-        let lastDist=0, lastMidX=0, lastMidY=0;
+        // ピンチ状態管理
+        let pinchStartDist=0, pinchStartScale=1;
+        let pinchStartMidX=0, pinchStartMidY=0;
+        let pinchStartVpX=0, pinchStartVpY=0;
         let isPinching=false;
-        // 1本指パン用
-        let isPanning=false, panSX=0, panSY=0, panStartX=0, panStartY=0;
-
-        mapContainer.addEventListener('touchstart', e=>{
-            if(e.touches.length===2){
-                isPinching=true; isPanning=false;
-                const t0=e.touches[0], t1=e.touches[1];
-                lastDist=Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
-                lastMidX=(t0.clientX+t1.clientX)/2;
-                lastMidY=(t0.clientY+t1.clientY)/2;
-                e.preventDefault();
-            }
-        },{passive:false});
-
-        mapContainer.addEventListener('touchmove', e=>{
-            if(e.touches.length===2 && isPinching){
-                e.preventDefault();
-                const t0=e.touches[0], t1=e.touches[1];
-                const dist=Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
-                const midX=(t0.clientX+t1.clientX)/2;
-                const midY=(t0.clientY+t1.clientY)/2;
-                const rect=mapContainer.getBoundingClientRect();
-
-                // ズーム中心（コンテナ内座標）
-                const cx=midX-rect.left, cy=midY-rect.top;
-
-                const ratio=dist/lastDist;
-                const newScale=Math.min(MAX_SCALE, Math.max(MIN_SCALE, vpScale*ratio));
-
-                // 中心点を維持しながらスケール変更
-                vpX=cx - (cx-vpX)*(newScale/vpScale);
-                vpY=cy - (cy-vpY)*(newScale/vpScale);
-                vpScale=newScale;
-
-                // パンも反映
-                vpX+=midX-lastMidX;
-                vpY+=midY-lastMidY;
-
-                clampPan();
-                applyTransform();
-
-                lastDist=dist; lastMidX=midX; lastMidY=midY;
-            }
-        },{passive:false});
-
-        mapContainer.addEventListener('touchend', e=>{
-            if(e.touches.length<2) isPinching=false;
-        },{passive:true});
-
-        // ダブルタップでリセット
         let lastTap=0;
-        mapContainer.addEventListener('touchend', e=>{
-            if(e.changedTouches.length===1){
+
+        function getTouches(e){ return Array.from(e.touches); }
+        function getDist(t0,t1){ return Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY); }
+        function getMid(t0,t1){ return {x:(t0.clientX+t1.clientX)/2, y:(t0.clientY+t1.clientY)/2}; }
+
+        // ★ touchstartはdocumentで拾う（layer内のイベントより先に処理）
+        document.addEventListener('touchstart', e=>{
+            // map-container内の2本指タッチのみ処理
+            if(e.touches.length===2){
+                const rect=mapContainer.getBoundingClientRect();
+                const t0=e.touches[0], t1=e.touches[1];
+                // 両指がmapContainer内にあるか確認
+                const inContainer = (
+                    t0.clientX>=rect.left && t0.clientX<=rect.right &&
+                    t0.clientY>=rect.top  && t0.clientY<=rect.bottom
+                );
+                if(!inContainer) return;
+
+                isPinching=true;
+                // ★ ピンチ開始時の状態を記録（増分ではなく絶対値で管理）
+                pinchStartDist=getDist(t0,t1);
+                pinchStartScale=vpScale;
+                pinchStartVpX=vpX;
+                pinchStartVpY=vpY;
+                const mid=getMid(t0,t1);
+                pinchStartMidX=mid.x; pinchStartMidY=mid.y;
+                e.preventDefault();
+            }
+        },{passive:false,capture:true});
+
+        document.addEventListener('touchmove', e=>{
+            if(!isPinching || e.touches.length!==2) return;
+            e.preventDefault();
+
+            const t0=e.touches[0], t1=e.touches[1];
+            const currentDist=getDist(t0,t1);
+            const currentMid=getMid(t0,t1);
+            const rect=mapContainer.getBoundingClientRect();
+
+            // ★ 開始時からの比率で計算（累積誤差なし）
+            const ratio=currentDist/pinchStartDist;
+            const newScale=Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScale*ratio));
+
+            // ズーム中心（コンテナ内座標）= 開始時の中点
+            const cx=pinchStartMidX-rect.left;
+            const cy=pinchStartMidY-rect.top;
+
+            // 中心点を固定してスケール
+            let newX=cx-(cx-pinchStartVpX)*(newScale/pinchStartScale);
+            let newY=cy-(cy-pinchStartVpY)*(newScale/pinchStartScale);
+
+            // 移動分を加算
+            newX+=(currentMid.x-pinchStartMidX);
+            newY+=(currentMid.y-pinchStartMidY);
+
+            vpScale=newScale; vpX=newX; vpY=newY;
+            clampPan();
+            applyTransform();
+
+        },{passive:false,capture:true});
+
+        document.addEventListener('touchend', e=>{
+            if(e.touches.length<2){
+                isPinching=false;
+            }
+            // ダブルタップでリセット
+            if(e.changedTouches.length===1 && e.touches.length===0){
                 const now=Date.now();
                 if(now-lastTap<300){
                     vpScale=1; vpX=0; vpY=0;
@@ -263,7 +283,7 @@
                 }
                 lastTap=now;
             }
-        },{passive:true});
+        },{passive:true,capture:true});
     }
 
     /* =====================================================
@@ -429,6 +449,7 @@
         let isRot=false,rotDev=null,rotId=null,cX=0,cY=0;
         function gp(e){return(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
         function hStart(e){
+            if(e.touches&&e.touches.length>=2) return; // 2本指はピンチズーム
             const handle=e.target.closest('.rotation-handle');
             if(handle){isRot=true;rotId=handle.dataset.handleFor;rotDev=devices.find(d=>d.lights.some(l=>l.id===rotId));const r=e.target.closest('.light').getBoundingClientRect();cX=r.left+r.width/2;cY=r.top+r.height/2;if(e.type==='touchstart')e.preventDefault();return;}
             const target=e.target.closest('.light,.switch');
@@ -440,6 +461,7 @@
             dEl=target;const pos=gp(e);sX=pos.x;sY=pos.y;isDrag=false;dEl.classList.add('dragging');if(e.type==='touchstart')e.preventDefault();
         }
         function hMove(e){
+            if(e.touches&&e.touches.length>=2) return; // ピンチ中は無視
             if(isRot&&rotDev){e.preventDefault();const pos=gp(e);let a=Math.atan2(pos.y-cY,pos.x-cX)*(180/Math.PI);if(a<0)a+=360;const lt=rotDev.lights.find(l=>l.id===rotId);if(lt)lt.rotation=Math.round(a);if(selectedSubId===rotId){const s=document.getElementById('rotation-line-slider');if(s)s.value=lt.rotation;}updateAllDOMStyles();return;}
             if(!dEl||!dDev)return;
             const pos=gp(e);if(Math.abs(pos.x-sX)>3||Math.abs(pos.y-sY)>3)isDrag=true;

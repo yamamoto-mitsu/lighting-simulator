@@ -4,151 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>間取り図 照明シミュレーター</title>
-    <!-- PDF.js の読み込み -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- 並び替え機能 (SortableJS) の読み込み -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    
-    <!-- Firebase互換ライブラリ (LINE内ブラウザ等での安定動作のため) -->
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* =========================================
-           基本スタイル・レイアウト
-           ========================================= */
         * { box-sizing: border-box; }
         body {
-            margin: 0;
-            padding: 0;
-            background-color: #f0f2f5;
+            margin: 0; padding: 0; background-color: #f0f2f5;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #333;
-            height: 100vh;
-            height: 100dvh; /* スマホブラウザでの高さズレ防止 */
-            overflow: hidden;
+            color: #333; height: 100vh; height: 100dvh; overflow: hidden;
         }
-
-        .app-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            padding: 15px;
-        }
-
+        .app-container { position: relative; width: 100%; height: 100%; padding: 15px; }
         .map-section {
-            width: 100%;
-            height: 100%;
-            background: #fff;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
+            width: 100%; height: 100%; background: #fff; border-radius: 12px;
+            padding: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: flex; flex-direction: column;
         }
-
-        /* フローティングパネル */
         .control-section {
-            position: absolute;
-            top: 25px;
-            right: 25px;
-            width: 340px;
+            position: absolute; top: 25px; right: 25px; width: 340px;
             max-height: calc(100vh - 50px);
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            z-index: 1000;
-            border: 1px solid rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            z-index: 1000; border: 1px solid rgba(0,0,0,0.1);
+            display: flex; flex-direction: column;
         }
-
         .control-header {
-            cursor: grab;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 12px 12px 0 0;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            cursor: grab; background: #f8f9fa; padding: 15px;
+            border-radius: 12px 12px 0 0; border-bottom: 1px solid #ddd;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        
         .control-header:active { cursor: grabbing; }
-
-        .control-content {
-            padding: 15px;
-            overflow-y: auto;
-            flex: 1;
-        }
-        
+        .control-content { padding: 15px; overflow-y: auto; flex: 1; }
         .control-content::-webkit-scrollbar { width: 6px; }
         .control-content::-webkit-scrollbar-track { background: transparent; }
         .control-content::-webkit-scrollbar-thumb { background: #bbb; border-radius: 3px; }
-
-        /* パネル内の各並び替えブロックのスタイル */
-        .panel-block {
-            position: relative;
-            margin-bottom: 12px;
-            background: #fff;
-            border-radius: 8px;
-            border: 1px solid transparent;
-            transition: border-color 0.2s;
-        }
+        .panel-block { position: relative; margin-bottom: 12px; background: #fff; border-radius: 8px; border: 1px solid transparent; transition: border-color 0.2s; }
         .panel-block:hover { border-color: #ddd; }
-        
-        .block-handle {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 24px;
-            height: 24px;
-            cursor: grab;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #aaa;
-            border-radius: 4px;
-            z-index: 10;
-        }
+        .block-handle { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; cursor: grab; display: flex; justify-content: center; align-items: center; color: #aaa; border-radius: 4px; z-index: 10; }
         .block-handle:hover { background: rgba(0,0,0,0.05); color: #555; }
         .block-handle:active { cursor: grabbing; }
-        
-        /* ドラッグ中の要素の見た目 */
-        .sortable-ghost {
-            opacity: 0.4;
-            background: #f9f9f9;
-            border: 1px dashed #bbb;
-        }
-
+        .sortable-ghost { opacity: 0.4; background: #f9f9f9; border: 1px dashed #bbb; }
         @media (max-width: 768px) {
             .app-container { padding: 10px; }
             .map-section { padding: 10px; }
-            .control-section { 
-                width: calc(100% - 40px); max-height: 50vh; 
-                top: auto; bottom: 20px; left: 20px; right: 20px; 
-            }
+            .control-section { width: calc(100% - 40px); max-height: 50vh; top: auto; bottom: 20px; left: 20px; right: 20px; }
         }
 
+        /* ★重要: map-containerはrelativeで、interactive-layerはabsoluteで画像描画領域に合わせる */
         #map-container {
-            position: relative; width: 100%; flex: 1; background-color: #fafafa;
-            border: 2px dashed #ddd; border-radius: 8px; overflow: hidden; touch-action: none;
+            position: relative; width: 100%; flex: 1;
+            background-color: #fafafa; border: 2px dashed #ddd;
+            border-radius: 8px; overflow: hidden;
         }
-        #floorplan-img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
-        #interactive-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        #floorplan-img {
+            display: block; width: 100%; height: 100%;
+            object-fit: contain; pointer-events: none;
+        }
+        /* interactive-layerは画像の実描画領域に動的に合わせる（JSで設定） */
+        #interactive-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            /* 初期値はcontainerと同じ、画像読み込み後にJSで更新 */
+        }
 
-        /* =========================================
-           UIパーツのデザイン
-           ========================================= */
         h2 { margin: 0; font-size: 1.1rem; }
         h3 { font-size: 1rem; color: #555; margin: 0; padding-top: 5px;}
-        
         .control-group { margin: 0; }
         .control-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
         input[type=range] { width: 100%; cursor: pointer; }
-        
         .btn { display: block; width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-bottom: 10px; }
         .btn:hover { background-color: #45a049; }
         .btn:disabled { background-color: #aaa; cursor: not-allowed; }
@@ -158,38 +84,32 @@
         .btn.btn-secondary:hover { background-color: #F57C00; }
         .btn.btn-danger { background-color: #f44336; margin-bottom: 0; }
         .btn.btn-danger:hover { background-color: #d32f2f; }
-
         .padded-box { padding: 15px; border-radius: 8px; padding-right: 35px; }
-
         #no-selection-msg { color: #777; font-size: 0.95rem; line-height: 1.6; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin: 0; }
 
-        /* =========================================
-           スイッチと照明の見た目
-           ========================================= */
         .switch {
-            position: absolute; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center;
-            cursor: grab; transform: translate(-50%, -50%); user-select: none; z-index: 10; transition: transform 0.1s;
-            --sw-bg: #fff; --sw-text: #333; --sw-border: #ccc; color: var(--sw-text); font-size: 14px; font-weight: bold;
+            position: absolute; width: 36px; height: 36px; display: flex;
+            justify-content: center; align-items: center;
+            cursor: grab; transform: translate(-50%, -50%); user-select: none;
+            z-index: 10; transition: transform 0.1s;
+            --sw-bg: #fff; --sw-text: #333; --sw-border: #ccc;
+            color: var(--sw-text); font-size: 14px; font-weight: bold;
         }
         .switch[data-shape="square"] { background-color: var(--sw-bg); border: 2px solid var(--sw-border); border-radius: 8px; box-shadow: 0 3px 6px rgba(0,0,0,0.2); }
         .switch[data-shape="triangle-down"] { background-color: transparent; align-items: flex-start; padding-top: 3px; }
         .switch[data-shape="triangle-down"]::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--sw-border); clip-path: polygon(0% 0%, 100% 0%, 50% 100%); z-index: -2; }
-        .switch[data-shape="triangle-down"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: calc(100% - 4px); height: calc(100% - 4px); background-color: var(--sw-bg); clip-path: polygon(0% 0%, 100% 0%, 50% 100%); z-index: -1; transition: background-color 0.2s; }
+        .switch[data-shape="triangle-down"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: calc(100% - 4px); height: calc(100% - 4px); background-color: var(--sw-bg); clip-path: polygon(0% 0%, 100% 0%, 50% 100%); z-index: -1; }
         .switch[data-shape="triangle-up"] { background-color: transparent; align-items: flex-end; padding-bottom: 2px; }
         .switch[data-shape="triangle-up"]::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--sw-border); clip-path: polygon(50% 0%, 0% 100%, 100% 100%); z-index: -2; }
-        .switch[data-shape="triangle-up"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: calc(100% - 4px); height: calc(100% - 4px); background-color: var(--sw-bg); clip-path: polygon(50% 12%, 4% 94%, 96% 94%); z-index: -1; transition: background-color 0.2s; }
-        
+        .switch[data-shape="triangle-up"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: calc(100% - 4px); height: calc(100% - 4px); background-color: var(--sw-bg); clip-path: polygon(50% 12%, 4% 94%, 96% 94%); z-index: -1; }
+
         .light { position: absolute; background-color: #e0e0e0; --rotation: 0deg; transform: translate(-50%, -50%) rotate(var(--rotation)); border: 2px solid #b0b0b0; z-index: 5; cursor: grab; transition: background-color 0.3s, border-color 0.3s; }
         .light.point { border-radius: 50%; }
         .light.line { border-radius: 6px; }
-
         .rotation-handle { position: absolute; right: -30px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; background-color: #FF9800; border: 2px solid #fff; border-radius: 50%; cursor: alias; display: none; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .rotation-handle:active { transform: translateY(-50%) scale(1.1); }
         .light.line.active-sub .rotation-handle { display: block; }
-
         .switch.dragging { cursor: grabbing; transform: translate(-50%, -50%) scale(1.1); z-index: 100; }
         .light.dragging { cursor: grabbing; transform: translate(-50%, -50%) rotate(var(--rotation)) scale(1.1); z-index: 100; }
-        
         .switch[data-shape="square"].selected, .light.selected { outline: 2px dashed #2196F3; outline-offset: 4px; }
         .switch[data-shape="square"].active-sub, .light.active-sub { outline: 3px solid #FF5722; outline-offset: 4px; z-index: 15; }
         .switch[data-shape="triangle-down"].selected, .switch[data-shape="triangle-up"].selected { --sw-border: #2196F3; }
@@ -199,7 +119,7 @@
         #dimmer-popup::before { content: "▲"; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); color: #FF5722; font-size: 16px; }
 
         .switch-list { margin-top: 10px; }
-        .switch-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; font-size: 0.9rem; transition: background 0.2s; }
+        .switch-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; font-size: 0.9rem; }
         .switch-list-item:hover { background: #f0f0f0; }
         .btn-small { padding: 4px 8px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; background-color: #f44336; color: white; }
         .btn-small:hover { background-color: #d32f2f; }
@@ -209,102 +129,82 @@
 
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 9999; display: none; justify-content: center; align-items: center; font-size: 1.5rem; font-weight: bold; color: #333; }
 
-        /* パネル開閉ボタン */
         #open-panel-btn {
             position: absolute; top: 25px; right: 25px; z-index: 990;
-            padding: 10px 15px; background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px; background: rgba(255,255,255,0.95);
             border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer;
             font-weight: bold; display: none; align-items: center; gap: 5px;
         }
         #open-panel-btn:hover { background: #f8f9fa; }
-        
         @media (max-width: 768px) {
             #open-panel-btn { top: auto; bottom: 20px; right: 20px; }
         }
     </style>
 </head>
 <body>
-
     <div id="loading-overlay">データを読み込んでいます...</div>
-
     <div class="app-container">
         <button id="open-panel-btn">⚙️ パネルを開く</button>
-
-        <!-- 左側：間取り図エリア -->
         <div class="map-section">
             <div id="map-container">
                 <img src="https://placehold.co/800x600/eeeeee/aaaaaa?text=Floor+Plan+Image" alt="間取り図" id="floorplan-img" onerror="this.style.display='none'">
                 <div id="interactive-layer">
                     <div id="dimmer-popup">
-                        <label style="font-size: 0.8rem; color: #555; display: block; text-align: center; margin-bottom: 5px; font-weight: bold;">明るさ調整</label>
-                        <input type="range" id="popup-brightness-slider" min="10" max="100" style="width: 100%;">
+                        <label style="font-size:0.8rem;color:#555;display:block;text-align:center;margin-bottom:5px;font-weight:bold;">明るさ調整</label>
+                        <input type="range" id="popup-brightness-slider" min="10" max="100" style="width:100%;">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 右側：コントロールパネル（フローティング） -->
         <div class="control-section" id="control-panel">
             <div class="control-header" id="control-handle">
                 <h2>⚙️ コントロールパネル</h2>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 0.75rem; color: #888;">≡ ドラッグで移動</span>
-                    <button id="close-panel-btn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #555; padding: 0; line-height: 1;" title="閉じる">×</button>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:0.75rem;color:#888;">≡ ドラッグで移動</span>
+                    <button id="close-panel-btn" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:#555;padding:0;line-height:1;">×</button>
                 </div>
             </div>
-            
-            <!-- 並べ替え可能なコンテナ -->
             <div class="control-content" id="panel-sortable">
-                
-                <!-- 1. 共有機能エリア -->
                 <div class="panel-block">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="background: #e8f5e9;">
-                        <label style="color: #2E7D32;">🔗 この配置を共有する</label>
-                        <p style="font-size: 0.8rem; color: #555; margin-top: 0; margin-bottom: 10px;">現在の配置をクラウドに保存し共有用URLを発行します。</p>
-                        <button id="share-btn" class="btn" style="background-color: #4CAF50; margin-bottom: 0;">URLを生成する</button>
-                        <div id="share-link-container" style="display: none; margin-top: 10px;">
-                            <input type="text" id="share-url" readonly style="width: 100%; padding: 8px; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px;" />
-                            <button id="copy-btn" class="btn-small" style="background-color: #2196F3; width: 100%; margin-top: 5px; padding: 8px; font-size: 0.9rem; font-weight: bold;">コピー</button>
+                    <div class="control-group padded-box" style="background:#e8f5e9;">
+                        <label style="color:#2E7D32;">🔗 この配置を共有する</label>
+                        <p style="font-size:0.8rem;color:#555;margin-top:0;margin-bottom:10px;">現在の配置をクラウドに保存し共有用URLを発行します。</p>
+                        <button id="share-btn" class="btn" style="background-color:#4CAF50;margin-bottom:0;">URLを生成する</button>
+                        <div id="share-link-container" style="display:none;margin-top:10px;">
+                            <input type="text" id="share-url" readonly style="width:100%;padding:8px;font-size:0.8rem;border:1px solid #ccc;border-radius:4px;" />
+                            <button id="copy-btn" class="btn-small" style="background-color:#2196F3;width:100%;margin-top:5px;padding:8px;font-size:0.9rem;font-weight:bold;">コピー</button>
                         </div>
                     </div>
                 </div>
-
-                <!-- 2. バックアップと復元エリア -->
                 <div class="panel-block">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="background: #fff3e0;">
-                        <label style="color: #e65100;">💾 バックアップと復元</label>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button id="export-btn" class="btn" style="background-color: #fb8c00; font-size: 0.9rem; padding: 8px; margin-bottom: 0;">書き出し</button>
-                            <button id="import-btn" class="btn-outline" style="border-color: #fb8c00; color: #fb8c00; font-size: 0.9rem; padding: 8px; margin-bottom: 0;">読み込み</button>
+                    <div class="control-group padded-box" style="background:#fff3e0;">
+                        <label style="color:#e65100;">💾 バックアップと復元</label>
+                        <div style="display:flex;gap:10px;margin-top:10px;">
+                            <button id="export-btn" class="btn" style="background-color:#fb8c00;font-size:0.9rem;padding:8px;margin-bottom:0;">書き出し</button>
+                            <button id="import-btn" class="btn-outline" style="border-color:#fb8c00;color:#fb8c00;font-size:0.9rem;padding:8px;margin-bottom:0;">読み込み</button>
                         </div>
-                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                        <input type="file" id="import-file" accept=".json" style="display:none;">
                     </div>
                 </div>
-            
-                <!-- 3. 画像読み込みエリア -->
                 <div class="panel-block">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="background: #e3f2fd;">
-                        <label style="color: #1565C0;">📂 間取り図を読み込む</label>
-                        <input type="file" id="bg-upload" accept="image/png, image/jpeg, application/pdf" style="width: 100%; margin-top: 5px;">
+                    <div class="control-group padded-box" style="background:#e3f2fd;">
+                        <label style="color:#1565C0;">📂 間取り図を読み込む</label>
+                        <input type="file" id="bg-upload" accept="image/png, image/jpeg, application/pdf" style="width:100%;margin-top:5px;">
                     </div>
                 </div>
-
-                <!-- 4. 追加ボタン -->
                 <div class="panel-block">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div style="padding-right: 30px;">
-                        <button id="add-point-btn" class="btn" style="background-color: #607D8B;">＋ 新規セット追加（丸型）</button>
-                        <button id="add-line-btn" class="btn btn-secondary" style="margin-bottom: 0;">＋ 新規セット追加（間接照明）</button>
+                    <div style="padding-right:30px;">
+                        <button id="add-point-btn" class="btn" style="background-color:#607D8B;">＋ 新規セット追加（丸型）</button>
+                        <button id="add-line-btn" class="btn btn-secondary" style="margin-bottom:0;">＋ 新規セット追加（間接照明）</button>
                     </div>
                 </div>
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-
-                <!-- 5. 未選択メッセージ -->
+                <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
                 <div class="panel-block" id="block-no-selection">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
                     <div id="no-selection-msg">
@@ -312,104 +212,90 @@
                         💡 <strong>ドラッグ＆ドロップ</strong>で配置を変更できます。
                     </div>
                 </div>
-
-                <!-- 編集系ブロック群（選択時に表示） -->
-                <div class="panel-block edit-block" id="block-header" style="display: none;">
+                <div class="panel-block edit-block" id="block-header" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <h3>選択中のグループ: <span id="selected-label" style="color:#2196F3;"></span></h3>
+                    <h3 style="padding:10px 30px 10px 10px;">選択中のグループ: <span id="selected-label" style="color:#2196F3;"></span></h3>
                 </div>
-                
-                <div class="panel-block edit-block" id="block-power" style="display: none;">
+                <div class="panel-block edit-block" id="block-power" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="background: #fafafa; border: 1px solid #eee;">
+                    <div class="control-group padded-box" style="background:#fafafa;border:1px solid #eee;">
                         <label>電源 (ON / OFF)</label>
                         <button id="toggle-power-btn" class="btn btn-primary">切り替え</button>
                     </div>
                 </div>
-                
-                <div class="panel-block edit-block" id="block-color" style="display: none;">
+                <div class="panel-block edit-block" id="block-color" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="background: #fafafa; border: 1px solid #eee;">
+                    <div class="control-group padded-box" style="background:#fafafa;border:1px solid #eee;">
                         <label>色温度（電球色 ⇔ 昼光色）</label>
                         <input type="range" id="color-slider" min="0" max="100" value="50">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #777; margin-top: 4px;">
-                            <span>オレンジ</span><span>白</span><span>青白</span>
-                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#777;margin-top:4px;"><span>オレンジ</span><span>白</span><span>青白</span></div>
                     </div>
                 </div>
-                
-                <div class="panel-block edit-block" id="block-brightness" style="display: none;">
+                <div class="panel-block edit-block" id="block-brightness" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="background: #fafafa; border: 1px solid #eee;">
+                    <div class="control-group padded-box" style="background:#fafafa;border:1px solid #eee;">
                         <label>明るさ</label>
                         <input type="range" id="brightness-slider" min="10" max="100" value="100">
                     </div>
                 </div>
-
-                <div class="panel-block edit-block" id="block-select-msg" style="display: none;">
+                <div class="panel-block edit-block" id="block-select-msg" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div style="color: #FF5722; font-size: 0.85rem; font-weight: bold; padding: 10px 30px 10px 10px;">
+                    <div style="color:#FF5722;font-size:0.85rem;font-weight:bold;padding:10px 30px 10px 10px;">
                         💡 個別のサイズや角度を変更するには、図面上の照明を直接クリックして選択（オレンジ枠）してください。
                     </div>
                 </div>
-
-                <div class="panel-block edit-block" id="block-size-point" style="display: none;">
+                <div class="panel-block edit-block" id="block-size-point" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="border-left: 4px solid #FF5722; background: #fffaf8;">
-                        <label style="color: #FF5722;">▼ 選択中（丸型）のサイズ</label>
+                    <div class="control-group padded-box" style="border-left:4px solid #FF5722;background:#fffaf8;">
+                        <label style="color:#FF5722;">▼ 選択中（丸型）のサイズ</label>
                         <input type="range" id="size-point-slider" min="10" max="150" value="44">
                     </div>
                 </div>
-
-                <div class="panel-block edit-block" id="block-size-line" style="display: none;">
+                <div class="panel-block edit-block" id="block-size-line" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="border-left: 4px solid #FF5722; background: #fffaf8;">
-                        <label style="color: #FF5722;">▼ 選択中（ライン）の設定</label>
-                        <label style="font-size: 0.8rem; margin-top: 5px;">長さ</label>
+                    <div class="control-group padded-box" style="border-left:4px solid #FF5722;background:#fffaf8;">
+                        <label style="color:#FF5722;">▼ 選択中（ライン）の設定</label>
+                        <label style="font-size:0.8rem;margin-top:5px;">長さ</label>
                         <input type="range" id="width-line-slider" min="10" max="600" value="150">
-                        <label style="font-size: 0.8rem; margin-top: 5px;">太さ</label>
+                        <label style="font-size:0.8rem;margin-top:5px;">太さ</label>
                         <input type="range" id="height-line-slider" min="5" max="50" value="15">
-                        <label style="font-size: 0.8rem; margin-top: 5px;">向き（角度）</label>
+                        <label style="font-size:0.8rem;margin-top:5px;">向き（角度）</label>
                         <input type="range" id="rotation-line-slider" min="0" max="360" value="0">
                     </div>
                 </div>
-                
-                <div class="panel-block edit-block" id="block-shape-switch" style="display: none;">
+                <div class="panel-block edit-block" id="block-shape-switch" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div class="control-group padded-box" style="border-left: 4px solid #FF5722; background: #fffaf8;">
-                        <label style="color: #FF5722;">▼ 選択中（スイッチ）の形状</label>
-                        <select id="shape-switch-select" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-top: 5px;">
+                    <div class="control-group padded-box" style="border-left:4px solid #FF5722;background:#fffaf8;">
+                        <label style="color:#FF5722;">▼ 選択中（スイッチ）の形状</label>
+                        <select id="shape-switch-select" style="width:100%;padding:8px;border-radius:4px;border:1px solid #ccc;margin-top:5px;">
                             <option value="square">四角（通常）</option>
                             <option value="triangle-down">逆三角（センサー）</option>
                             <option value="triangle-up">上三角（調光スイッチ）</option>
                         </select>
                     </div>
                 </div>
-                
-                <div class="panel-block edit-block" id="block-light-list" style="display: none;">
+                <div class="panel-block edit-block" id="block-light-list" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
                     <div class="control-group padded-box">
                         <label>連動する照明器具</label>
                         <div id="light-list" class="switch-list"></div>
-                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <div style="display:flex;gap:10px;margin-top:10px;">
                             <button id="add-linked-point-btn" class="btn-outline">＋ 丸型追加</button>
                             <button id="add-linked-line-btn" class="btn-outline">＋ ライン追加</button>
                         </div>
                     </div>
                 </div>
-
-                <div class="panel-block edit-block" id="block-switch-list" style="display: none;">
+                <div class="panel-block edit-block" id="block-switch-list" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
                     <div class="control-group padded-box">
                         <label>連動スイッチ（3路・4路）</label>
                         <div id="switch-list" class="switch-list"></div>
-                        <button id="add-switch-btn" class="btn-outline" style="margin-top: 10px;">＋ スイッチを追加</button>
+                        <button id="add-switch-btn" class="btn-outline" style="margin-top:10px;">＋ スイッチを追加</button>
                     </div>
                 </div>
-
-                <div class="panel-block edit-block" id="block-delete" style="display: none;">
+                <div class="panel-block edit-block" id="block-delete" style="display:none;">
                     <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                    <div style="padding-right: 30px;">
+                    <div style="padding-right:30px;">
                         <button id="delete-btn" class="btn btn-danger">この照明セットを全て削除</button>
                     </div>
                 </div>
@@ -417,641 +303,530 @@
         </div>
     </div>
 
-    <!-- メインロジック -->
     <script>
-        // ★★★ ご自身のサーバーで「共有URL機能」を使うための設定 ★★★
         const myFirebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID", storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID", appId: "YOUR_APP_ID"
         };
-
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'simulator-app-id';
         let auth, db, user;
-
         try {
             const envConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
             let activeConfig = envConfigStr ? JSON.parse(envConfigStr) : myFirebaseConfig;
-
             if (activeConfig && activeConfig.apiKey !== "YOUR_API_KEY") {
                 firebase.initializeApp(activeConfig);
-                auth = firebase.auth();
-                db = firebase.firestore();
-                
+                auth = firebase.auth(); db = firebase.firestore();
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     auth.signInWithCustomToken(__initial_auth_token).catch(console.error);
-                } else {
-                    auth.signInAnonymously().catch(console.error);
-                }
+                } else { auth.signInAnonymously().catch(console.error); }
                 auth.onAuthStateChanged(u => { user = u; });
             }
-        } catch(e) {
-            console.error("Firebase Initialization Error:", e);
+        } catch(e) { console.error("Firebase Initialization Error:", e); }
+
+        /* =========================================
+           ★★★ 画像描画領域の計算（ズレ修正の核心）★★★
+           object-fit:contain で表示した場合、画像は
+           コンテナ内に余白付きで表示される。
+           interactive-layerをその実描画領域にぴったり合わせる。
+           ========================================= */
+        const imgEl = document.getElementById('floorplan-img');
+        const container = document.getElementById('map-container');
+        const layer = document.getElementById('interactive-layer');
+
+        function updateLayerBounds() {
+            // 画像が読み込まれていない場合はcontainerと同じにする
+            if (!imgEl.naturalWidth || !imgEl.naturalHeight) {
+                layer.style.left = '0px'; layer.style.top = '0px';
+                layer.style.width = '100%'; layer.style.height = '100%';
+                return;
+            }
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const iw = imgEl.naturalWidth;
+            const ih = imgEl.naturalHeight;
+
+            // object-fit:contain の実描画サイズを計算
+            const scale = Math.min(cw / iw, ch / ih);
+            const drawW = iw * scale;
+            const drawH = ih * scale;
+            const drawX = (cw - drawW) / 2;
+            const drawY = (ch - drawH) / 2;
+
+            layer.style.position = 'absolute';
+            layer.style.left = drawX + 'px';
+            layer.style.top = drawY + 'px';
+            layer.style.width = drawW + 'px';
+            layer.style.height = drawH + 'px';
         }
 
-        /* =========================================
-           データ管理（状態）
-           ========================================= */
-        let devices = [
-            { 
-                id: "dev-1", label: "S1", isOn: false, color: 50, brightness: 100, 
-                lights: [ { id: "l-1-1", type: "point", width: 44, height: 44, rotation: 0, top: "40%", left: "30%" } ],
-                switches: [{ id: "sw-1-1", label: "S1", shape: "square", top: "60%", left: "20%" }]
-            },
-            { 
-                id: "dev-2", label: "S2", isOn: false, color: 10, brightness: 80, 
-                lights: [
-                    { id: "l-2-1", type: "point", width: 44, height: 44, rotation: 0, top: "60%", left: "70%" },
-                    { id: "l-2-2", type: "point", width: 44, height: 44, rotation: 0, top: "70%", left: "70%" }
-                ],
-                switches: [
-                    { id: "sw-2-1", label: "S2", shape: "square", top: "80%", left: "60%" },
-                    { id: "sw-2-2", label: "S2'", shape: "triangle-down", top: "85%", left: "65%" }
-                ]
-            },
-            { 
-                id: "dev-3", label: "L1", isOn: true, color: 0, brightness: 80, 
-                lights: [ { id: "l-3-1", type: "line", width: 250, height: 12, rotation: 0, top: "15%", left: "50%" } ],
-                switches: [{ id: "sw-3-1", label: "L1", shape: "triangle-up", top: "25%", left: "50%" }]
-            }
-        ];
-        
-        let selectedId = null;
-        let selectedSubId = null;
-        let selectedType = null;
-        let deviceCounter = 4;
-        
-        const domMap = new Map();
-        const layer = document.getElementById('interactive-layer');
-        const dimmerPopup = document.getElementById('dimmer-popup');
+        imgEl.addEventListener('load', () => {
+            requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ updateLayerBounds(); renderAll(); }); });
+        });
+        window.addEventListener('resize', () => {
+            requestAnimationFrame(()=>{ updateLayerBounds(); renderAll(); });
+        });
+        // 初期実行
+        updateLayerBounds();
 
         /* =========================================
-           旧データの自動変換（マイグレーション）
+           データ管理
            ========================================= */
+        let devices = [
+            { id:"dev-1", label:"S1", isOn:false, color:50, brightness:100,
+              lights:[{id:"l-1-1", type:"point", width:44, height:44, rotation:0, top:"40%", left:"30%"}],
+              switches:[{id:"sw-1-1", label:"S1", shape:"square", top:"60%", left:"20%"}] },
+            { id:"dev-2", label:"S2", isOn:false, color:10, brightness:80,
+              lights:[{id:"l-2-1",type:"point",width:44,height:44,rotation:0,top:"60%",left:"70%"},{id:"l-2-2",type:"point",width:44,height:44,rotation:0,top:"70%",left:"70%"}],
+              switches:[{id:"sw-2-1",label:"S2",shape:"square",top:"80%",left:"60%"},{id:"sw-2-2",label:"S2'",shape:"triangle-down",top:"85%",left:"65%"}] },
+            { id:"dev-3", label:"L1", isOn:true, color:0, brightness:80,
+              lights:[{id:"l-3-1",type:"line",width:250,height:12,rotation:0,top:"15%",left:"50%"}],
+              switches:[{id:"sw-3-1",label:"L1",shape:"triangle-up",top:"25%",left:"50%"}] }
+        ];
+
+        let selectedId = null, selectedSubId = null, selectedType = null, deviceCounter = 4;
+        const domMap = new Map();
+        const dimmerPopup = document.getElementById('dimmer-popup');
+
         function migrateDevices(loadedDevices) {
             if (!Array.isArray(loadedDevices)) return [];
             return loadedDevices.map(d => {
-                // すでに新しい構造（lights/switches配列がある）ならそのまま
                 if (d.lights && Array.isArray(d.lights) && d.switches && Array.isArray(d.switches)) return d;
-                
-                // 古い構造から新しい構造に変換
                 let newLights = [];
                 if (d.light) {
-                    newLights.push({
-                        id: 'l-' + Date.now() + Math.floor(Math.random()*1000),
-                        type: d.type || 'point',
-                        width: d.width || (d.type === 'line' ? 200 : 44),
-                        height: d.height || (d.type === 'line' ? 15 : 44),
-                        rotation: d.rotation || 0,
-                        top: d.light.top || "50%",
-                        left: d.light.left || "50%"
-                    });
+                    newLights.push({id:'l-'+Date.now()+Math.floor(Math.random()*1000),type:d.type||'point',width:d.width||(d.type==='line'?200:44),height:d.height||(d.type==='line'?15:44),rotation:d.rotation||0,top:d.light.top||"50%",left:d.light.left||"50%"});
                 } else if (d.lights) { newLights = d.lights; }
-
                 let newSwitches = [];
-                if (d.switches) {
-                    newSwitches = d.switches;
-                } else if (d.switch) {
-                    newSwitches.push({
-                        id: 'sw-' + Date.now() + Math.floor(Math.random()*1000),
-                        label: d.switch.label || d.label || 'S',
-                        shape: 'square',
-                        top: d.switch.top || "50%",
-                        left: d.switch.left || "50%"
-                    });
-                }
-
-                return {
-                    id: d.id || "dev-" + Date.now() + Math.floor(Math.random()*1000),
-                    label: d.label || "S",
-                    isOn: d.isOn || false,
-                    color: d.color !== undefined ? d.color : 50,
-                    brightness: d.brightness !== undefined ? d.brightness : 100,
-                    lights: newLights.length ? newLights : [],
-                    switches: newSwitches.length ? newSwitches : []
-                };
+                if (d.switches) { newSwitches = d.switches; }
+                else if (d.switch) { newSwitches.push({id:'sw-'+Date.now()+Math.floor(Math.random()*1000),label:d.switch.label||d.label||'S',shape:'square',top:d.switch.top||"50%",left:d.switch.left||"50%"}); }
+                return {id:d.id||"dev-"+Date.now(),label:d.label||"S",isOn:d.isOn||false,color:d.color!==undefined?d.color:50,brightness:d.brightness!==undefined?d.brightness:100,lights:newLights,switches:newSwitches};
             });
         }
 
-        /* =========================================
-           初期化とDOM生成
-           ========================================= */
         async function init() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 const shareId = urlParams.get('share');
                 if (shareId && db) {
                     document.getElementById('loading-overlay').style.display = 'flex';
-                    await new Promise(resolve => {
-                        const checkAuth = setInterval(() => { if (user) { clearInterval(checkAuth); resolve(); } }, 100);
-                        setTimeout(() => { clearInterval(checkAuth); resolve(); }, 3000);
-                    });
+                    await new Promise(resolve => { const c = setInterval(()=>{if(user){clearInterval(c);resolve();}},100); setTimeout(()=>{clearInterval(c);resolve();},3000); });
                     await loadFromCloud(shareId);
                     document.getElementById('loading-overlay').style.display = 'none';
                 }
-            } catch (err) {
-                console.error("Initialization Error:", err);
-                document.getElementById('loading-overlay').style.display = 'none';
-            }
-
+            } catch(err) { console.error(err); document.getElementById('loading-overlay').style.display = 'none'; }
             if (typeof Sortable !== 'undefined') {
-                new Sortable(document.getElementById('panel-sortable'), {
-                    handle: '.block-handle',
-                    animation: 150,
-                    ghostClass: 'sortable-ghost'
-                });
+                new Sortable(document.getElementById('panel-sortable'), {handle:'.block-handle',animation:150,ghostClass:'sortable-ghost'});
             }
-
-            renderAll();
-            setupDragAndDrop();
-            setupPanelDragAndDrop();
+            renderAll(); setupDragAndDrop(); setupPanelDragAndDrop();
         }
 
         function renderAll() {
-            try {
-                Array.from(layer.children).forEach(child => { if (child.id !== 'dimmer-popup') child.remove(); });
-                domMap.clear();
-
-                devices.forEach(device => {
-                    const lightEls = [];
-                    device.lights.forEach(lt => {
-                        const lightEl = document.createElement('div');
-                        lightEl.className = `light ${lt.type}`;
-                        lightEl.dataset.deviceId = device.id;
-                        lightEl.dataset.lightId = lt.id;
-                        if (lt.type === 'line') {
-                            const handleEl = document.createElement('div');
-                            handleEl.className = 'rotation-handle';
-                            handleEl.dataset.handleFor = lt.id;
-                            lightEl.appendChild(handleEl);
-                        }
-                        layer.appendChild(lightEl);
-                        lightEls.push(lightEl);
-                    });
-                    
-                    const switchEls = [];
-                    device.switches.forEach(sw => {
-                        const switchEl = document.createElement('div');
-                        switchEl.className = 'switch';
-                        switchEl.dataset.deviceId = device.id;
-                        switchEl.dataset.switchId = sw.id;
-                        switchEl.textContent = sw.label;
-                        layer.appendChild(switchEl);
-                        switchEls.push(switchEl);
-                    });
-                    domMap.set(device.id, { lightEls, switchEls });
+            Array.from(layer.children).forEach(child => { if(child.id!=='dimmer-popup') child.remove(); });
+            domMap.clear();
+            devices.forEach(device => {
+                const lightEls = [];
+                device.lights.forEach(lt => {
+                    const el = document.createElement('div');
+                    el.className = `light ${lt.type}`;
+                    el.dataset.deviceId = device.id; el.dataset.lightId = lt.id;
+                    if (lt.type === 'line') {
+                        const h = document.createElement('div');
+                        h.className = 'rotation-handle'; h.dataset.handleFor = lt.id;
+                        el.appendChild(h);
+                    }
+                    layer.appendChild(el); lightEls.push(el);
                 });
-                updateAllDOMStyles();
-                updateDimmerPopupPosition();
-            } catch (err) {
-                console.error("Render Error:", err);
-            }
+                const switchEls = [];
+                device.switches.forEach(sw => {
+                    const el = document.createElement('div');
+                    el.className = 'switch';
+                    el.dataset.deviceId = device.id; el.dataset.switchId = sw.id;
+                    el.textContent = sw.label;
+                    layer.appendChild(el); switchEls.push(el);
+                });
+                domMap.set(device.id, {lightEls, switchEls});
+            });
+            updateAllDOMStyles(); updateDimmerPopupPosition();
         }
 
-        /* =========================================
-           スタイルの更新
-           ========================================= */
         function getColorRGB(val) {
-            if (val < 50) {
-                let p = val / 50; return { r: 255, g: Math.round(170 + (255 - 170) * p), b: Math.round(50 + (255 - 50) * p) };
-            } else {
-                let p = (val - 50) / 50; return { r: Math.round(255 - (255 - 210) * p), g: Math.round(255 - (255 - 230) * p), b: 255 };
-            }
+            if (val < 50) { let p=val/50; return {r:255,g:Math.round(170+(255-170)*p),b:Math.round(50+(255-50)*p)}; }
+            else { let p=(val-50)/50; return {r:Math.round(255-(255-210)*p),g:Math.round(255-(255-230)*p),b:255}; }
         }
 
         function updateAllDOMStyles() {
             devices.forEach(device => {
-                const els = domMap.get(device.id);
-                if (!els) return;
-
-                device.lights.forEach((lt, index) => {
-                    const lightEl = els.lightEls[index];
-                    if (!lightEl) return;
-                    lightEl.style.top = lt.top; lightEl.style.left = lt.left;
-                    lightEl.style.width = lt.width + 'px'; lightEl.style.height = lt.height + 'px';
-                    lightEl.style.setProperty('--rotation', `${lt.rotation || 0}deg`);
-
-                    lightEl.classList.remove('selected', 'active-sub');
-                    if (device.id === selectedId) lightEl.classList.add('selected');
-                    if (lt.id === selectedSubId) lightEl.classList.add('active-sub');
-
+                const els = domMap.get(device.id); if (!els) return;
+                device.lights.forEach((lt, i) => {
+                    const el = els.lightEls[i]; if (!el) return;
+                    el.style.top = lt.top; el.style.left = lt.left;
+                    el.style.width = lt.width+'px'; el.style.height = lt.height+'px';
+                    el.style.setProperty('--rotation', `${lt.rotation||0}deg`);
+                    el.classList.remove('selected','active-sub');
+                    if (device.id === selectedId) el.classList.add('selected');
+                    if (lt.id === selectedSubId) el.classList.add('active-sub');
                     if (device.isOn) {
-                        const color = getColorRGB(device.color);
-                        const alpha = (device.brightness / 100) * 0.7 + 0.1;
-                        let spread = (device.brightness / 100) * 15 + 5; 
-                        let blur = (device.brightness / 100) * 25 + 10;
-                        if (lt.type === 'line') spread = spread * 0.7;
-
-                        lightEl.style.backgroundColor = `rgb(${color.r}, ${color.g}, ${color.b})`;
-                        lightEl.style.borderColor = '#fff';
-                        lightEl.style.boxShadow = `0 0 ${blur}px ${spread}px rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
-                    } else {
-                        lightEl.style.backgroundColor = ''; lightEl.style.borderColor = ''; lightEl.style.boxShadow = '';
-                    }
+                        const c = getColorRGB(device.color);
+                        const alpha = (device.brightness/100)*0.7+0.1;
+                        let spread = (device.brightness/100)*15+5, blur = (device.brightness/100)*25+10;
+                        if (lt.type==='line') spread*=0.7;
+                        el.style.backgroundColor = `rgb(${c.r},${c.g},${c.b})`;
+                        el.style.borderColor = '#fff';
+                        el.style.boxShadow = `0 0 ${blur}px ${spread}px rgba(${c.r},${c.g},${c.b},${alpha})`;
+                    } else { el.style.backgroundColor=''; el.style.borderColor=''; el.style.boxShadow=''; }
                 });
-
-                device.switches.forEach((swData, index) => {
-                    const switchEl = els.switchEls[index];
-                    if (!switchEl) return;
-                    switchEl.style.top = swData.top; switchEl.style.left = swData.left;
-                    switchEl.dataset.shape = swData.shape || 'square';
-                    
-                    switchEl.classList.remove('selected', 'active-sub');
-                    if (device.id === selectedId) switchEl.classList.add('selected');
-                    if (swData.id === selectedSubId) switchEl.classList.add('active-sub');
-
-                    if (device.isOn) {
-                        switchEl.style.setProperty('--sw-bg', '#4CAF50'); switchEl.style.setProperty('--sw-text', 'white');
-                    } else {
-                        switchEl.style.setProperty('--sw-bg', '#fff'); switchEl.style.setProperty('--sw-text', '#333');
-                    }
+                device.switches.forEach((sw, i) => {
+                    const el = els.switchEls[i]; if (!el) return;
+                    el.style.top = sw.top; el.style.left = sw.left;
+                    el.dataset.shape = sw.shape||'square';
+                    el.classList.remove('selected','active-sub');
+                    if (device.id === selectedId) el.classList.add('selected');
+                    if (sw.id === selectedSubId) el.classList.add('active-sub');
+                    if (device.isOn) { el.style.setProperty('--sw-bg','#4CAF50'); el.style.setProperty('--sw-text','white'); }
+                    else { el.style.setProperty('--sw-bg','#fff'); el.style.setProperty('--sw-text','#333'); }
                 });
             });
         }
 
         function updateDimmerPopupPosition() {
-            if (selectedType === 'switch' && selectedSubId) {
-                const device = devices.find(d => d.id === selectedId);
-                const sw = device.switches.find(s => s.id === selectedSubId);
-                if (sw && sw.shape === 'triangle-up') {
-                    dimmerPopup.style.display = 'block';
-                    dimmerPopup.style.left = sw.left;
-                    dimmerPopup.style.top = sw.top;
+            if (selectedType==='switch' && selectedSubId) {
+                const device = devices.find(d=>d.id===selectedId);
+                const sw = device&&device.switches.find(s=>s.id===selectedSubId);
+                if (sw && sw.shape==='triangle-up') {
+                    dimmerPopup.style.display='block';
+                    dimmerPopup.style.left=sw.left; dimmerPopup.style.top=sw.top;
                     document.getElementById('popup-brightness-slider').value = device.brightness;
                     return;
                 }
             }
-            dimmerPopup.style.display = 'none';
+            dimmerPopup.style.display='none';
         }
 
-        dimmerPopup.addEventListener('mousedown', e => e.stopPropagation());
-        dimmerPopup.addEventListener('touchstart', e => e.stopPropagation(), {passive: false});
-        document.getElementById('popup-brightness-slider').addEventListener('input', (e) => {
+        dimmerPopup.addEventListener('mousedown', e=>e.stopPropagation());
+        dimmerPopup.addEventListener('touchstart', e=>e.stopPropagation(), {passive:false});
+        document.getElementById('popup-brightness-slider').addEventListener('input', e => {
             if (!selectedId) return;
-            const device = devices.find(d => d.id === selectedId);
-            if (device) {
-                device.brightness = parseInt(e.target.value);
-                document.getElementById('brightness-slider').value = device.brightness;
-                updateAllDOMStyles();
-            }
+            const device = devices.find(d=>d.id===selectedId);
+            if (device) { device.brightness=parseInt(e.target.value); document.getElementById('brightness-slider').value=device.brightness; updateAllDOMStyles(); }
         });
 
         /* =========================================
-           ドラッグ＆ドロップ (図面上の操作)
+           ドラッグ＆ドロップ
            ========================================= */
         function setupDragAndDrop() {
-            let draggingEl = null, draggingTargetType = null, draggingDevice = null, draggingSubId = null;
-            let startX = 0, startY = 0, isDragging = false;
-            let isRotating = false, rotatingDevice = null, rotatingLightId = null, centerX = 0, centerY = 0;
+            let draggingEl=null, draggingTargetType=null, draggingDevice=null, draggingSubId=null;
+            let startX=0, startY=0, isDragging=false;
+            let isRotating=false, rotatingDevice=null, rotatingLightId=null, centerX=0, centerY=0;
 
-            function getPos(e) { return (e.touches && e.touches.length > 0) ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY }; }
+            function getPos(e) { return (e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}; }
 
             function handleStart(e) {
                 const handle = e.target.closest('.rotation-handle');
                 if (handle) {
-                    isRotating = true; rotatingLightId = handle.dataset.handleFor;
-                    rotatingDevice = devices.find(d => d.lights.some(l => l.id === rotatingLightId));
-                    const rect = e.target.closest('.light').getBoundingClientRect();
-                    centerX = rect.left + rect.width / 2; centerY = rect.top + rect.height / 2;
-                    if(e.type === 'touchstart') e.preventDefault();
-                    return;
+                    isRotating=true; rotatingLightId=handle.dataset.handleFor;
+                    rotatingDevice=devices.find(d=>d.lights.some(l=>l.id===rotatingLightId));
+                    const rect=e.target.closest('.light').getBoundingClientRect();
+                    centerX=rect.left+rect.width/2; centerY=rect.top+rect.height/2;
+                    if(e.type==='touchstart') e.preventDefault(); return;
                 }
-
                 const target = e.target.closest('.light, .switch');
                 if (!target) {
-                    selectedId = null; selectedSubId = null; selectedType = null;
-                    updateControlPanel(); updateAllDOMStyles(); updateDimmerPopupPosition();
-                    return;
+                    selectedId=null; selectedSubId=null; selectedType=null;
+                    updateControlPanel(); updateAllDOMStyles(); updateDimmerPopupPosition(); return;
                 }
-
-                selectedId = target.dataset.deviceId;
-                draggingDevice = devices.find(d => d.id === selectedId);
+                selectedId=target.dataset.deviceId;
+                draggingDevice=devices.find(d=>d.id===selectedId);
                 if (target.classList.contains('light')) {
-                    selectedType = draggingTargetType = 'light'; selectedSubId = draggingSubId = target.dataset.lightId;
+                    selectedType=draggingTargetType='light'; selectedSubId=draggingSubId=target.dataset.lightId;
                 } else {
-                    selectedType = draggingTargetType = 'switch'; selectedSubId = draggingSubId = target.dataset.switchId;
+                    selectedType=draggingTargetType='switch'; selectedSubId=draggingSubId=target.dataset.switchId;
                 }
-                
                 updateControlPanel(); updateAllDOMStyles(); updateDimmerPopupPosition();
-
-                draggingEl = target; const pos = getPos(e); startX = pos.x; startY = pos.y; isDragging = false;
+                draggingEl=target; const pos=getPos(e); startX=pos.x; startY=pos.y; isDragging=false;
                 draggingEl.classList.add('dragging');
-                if(e.type === 'touchstart') e.preventDefault();
+                if(e.type==='touchstart') e.preventDefault();
             }
 
             function handleMove(e) {
                 if (isRotating && rotatingDevice) {
-                    e.preventDefault(); const pos = getPos(e);
-                    let angle = Math.atan2(pos.y - centerY, pos.x - centerX) * (180 / Math.PI);
-                    if (angle < 0) angle += 360;
-                    const lt = rotatingDevice.lights.find(l => l.id === rotatingLightId);
-                    if (lt) lt.rotation = Math.round(angle);
-                    if (selectedSubId === rotatingLightId) {
-                        const slider = document.getElementById('rotation-line-slider');
-                        if (slider) slider.value = lt.rotation;
-                    }
-                    updateAllDOMStyles();
-                    return;
+                    e.preventDefault(); const pos=getPos(e);
+                    let angle=Math.atan2(pos.y-centerY,pos.x-centerX)*(180/Math.PI);
+                    if (angle<0) angle+=360;
+                    const lt=rotatingDevice.lights.find(l=>l.id===rotatingLightId);
+                    if (lt) lt.rotation=Math.round(angle);
+                    if (selectedSubId===rotatingLightId) { const s=document.getElementById('rotation-line-slider'); if(s) s.value=lt.rotation; }
+                    updateAllDOMStyles(); return;
                 }
-
-                if (!draggingEl || !draggingDevice) return;
-                const pos = getPos(e); const dx = pos.x - startX; const dy = pos.y - startY;
-                if (Math.abs(dx) > 3 || Math.abs(dy) > 3) isDragging = true;
-
+                if (!draggingEl||!draggingDevice) return;
+                const pos=getPos(e); const dx=pos.x-startX; const dy=pos.y-startY;
+                if (Math.abs(dx)>3||Math.abs(dy)>3) isDragging=true;
                 if (isDragging) {
                     e.preventDefault();
-                    const rect = layer.getBoundingClientRect();
-                    let x = Math.max(0, Math.min(pos.x - rect.left, rect.width));
-                    let y = Math.max(0, Math.min(pos.y - rect.top, rect.height));
-                    const leftPct = (x / rect.width) * 100; const topPct = (y / rect.height) * 100;
-
-                    if (draggingTargetType === 'light') {
-                        const lt = draggingDevice.lights.find(l => l.id === draggingSubId);
-                        if (lt) { lt.left = `${leftPct}%`; lt.top = `${topPct}%`; }
+                    // ★layerのboundingRectを使って%を計算（containerではなくlayer基準）
+                    const rect=layer.getBoundingClientRect();
+                    let x=Math.max(0,Math.min(pos.x-rect.left,rect.width));
+                    let y=Math.max(0,Math.min(pos.y-rect.top,rect.height));
+                    const leftPct=(x/rect.width)*100; const topPct=(y/rect.height)*100;
+                    if (draggingTargetType==='light') {
+                        const lt=draggingDevice.lights.find(l=>l.id===draggingSubId);
+                        if (lt) { lt.left=`${leftPct}%`; lt.top=`${topPct}%`; }
                     } else {
-                        const sw = draggingDevice.switches.find(s => s.id === draggingSubId);
-                        if (sw) { sw.left = `${leftPct}%`; sw.top = `${topPct}%`; }
+                        const sw=draggingDevice.switches.find(s=>s.id===draggingSubId);
+                        if (sw) { sw.left=`${leftPct}%`; sw.top=`${topPct}%`; }
                     }
-                    draggingEl.style.left = `${leftPct}%`; draggingEl.style.top = `${topPct}%`;
+                    draggingEl.style.left=`${leftPct}%`; draggingEl.style.top=`${topPct}%`;
                     updateDimmerPopupPosition();
                 }
             }
 
             function handleEnd(e) {
-                if (isRotating) { isRotating = false; rotatingDevice = null; rotatingLightId = null; return; }
+                if (isRotating) { isRotating=false; rotatingDevice=null; rotatingLightId=null; return; }
                 if (!draggingEl) return;
                 draggingEl.classList.remove('dragging');
-                if (!isDragging && draggingTargetType === 'switch') { draggingDevice.isOn = !draggingDevice.isOn; updateAllDOMStyles(); }
-                draggingEl = null; draggingDevice = null; draggingSubId = null;
+                if (!isDragging && draggingTargetType==='switch') { draggingDevice.isOn=!draggingDevice.isOn; updateAllDOMStyles(); }
+                draggingEl=null; draggingDevice=null; draggingSubId=null;
             }
 
-            layer.addEventListener('mousedown', handleStart); document.addEventListener('mousemove', handleMove); document.addEventListener('mouseup', handleEnd);
-            layer.addEventListener('touchstart', handleStart, {passive: false}); document.addEventListener('touchmove', handleMove, {passive: false}); document.addEventListener('touchend', handleEnd);
+            layer.addEventListener('mousedown', handleStart);
+            document.addEventListener('mousemove', handleMove);
+            document.addEventListener('mouseup', handleEnd);
+            layer.addEventListener('touchstart', handleStart, {passive:false});
+            document.addEventListener('touchmove', handleMove, {passive:false});
+            document.addEventListener('touchend', handleEnd);
         }
 
-        /* =========================================
-           パネル自体のドラッグ移動制御
-           ========================================= */
         function setupPanelDragAndDrop() {
-            const panel = document.getElementById('control-panel');
-            const handle = document.getElementById('control-handle');
-            let isDragging = false, startX, startY, initialLeft, initialTop;
-
+            const panel=document.getElementById('control-panel');
+            const handle=document.getElementById('control-handle');
+            let isDragging=false, startX, startY, initialLeft, initialTop;
             function onDown(e) {
                 if (e.target.closest('#close-panel-btn')) return;
                 if (!e.target.closest('#control-handle')) return;
-                isDragging = true;
-                const pos = (e.touches && e.touches.length > 0) ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY };
-                startX = pos.x; startY = pos.y;
-                const rect = panel.getBoundingClientRect();
-                initialLeft = rect.left; initialTop = rect.top;
-                
-                panel.style.right = 'auto'; panel.style.bottom = 'auto';
-                panel.style.left = initialLeft + 'px'; panel.style.top = initialTop + 'px'; panel.style.margin = '0';
-                if(e.type === 'touchstart') e.preventDefault();
+                isDragging=true;
+                const pos=(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
+                startX=pos.x; startY=pos.y;
+                const rect=panel.getBoundingClientRect();
+                initialLeft=rect.left; initialTop=rect.top;
+                panel.style.right='auto'; panel.style.bottom='auto';
+                panel.style.left=initialLeft+'px'; panel.style.top=initialTop+'px'; panel.style.margin='0';
+                if(e.type==='touchstart') e.preventDefault();
             }
-
             function onMove(e) {
-                if (!isDragging) return;
-                e.preventDefault();
-                const pos = (e.touches && e.touches.length > 0) ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : { x: e.clientX, y: e.clientY };
-                let newLeft = Math.max(0, Math.min(initialLeft + pos.x - startX, window.innerWidth - panel.offsetWidth));
-                let newTop = Math.max(0, Math.min(initialTop + pos.y - startY, window.innerHeight - 50));
-                panel.style.left = newLeft + 'px'; panel.style.top = newTop + 'px';
+                if (!isDragging) return; e.preventDefault();
+                const pos=(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};
+                panel.style.left=Math.max(0,Math.min(initialLeft+pos.x-startX,window.innerWidth-panel.offsetWidth))+'px';
+                panel.style.top=Math.max(0,Math.min(initialTop+pos.y-startY,window.innerHeight-50))+'px';
             }
-
-            function onUp() { isDragging = false; }
-
-            handle.addEventListener('mousedown', onDown); document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp);
-            handle.addEventListener('touchstart', onDown, {passive: false}); document.addEventListener('touchmove', onMove, {passive: false}); document.addEventListener('touchend', onUp);
-
-            document.getElementById('close-panel-btn').addEventListener('click', () => {
-                panel.style.display = 'none'; document.getElementById('open-panel-btn').style.display = 'flex';
-            });
-            document.getElementById('open-panel-btn').addEventListener('click', () => {
-                panel.style.display = 'flex'; document.getElementById('open-panel-btn').style.display = 'none';
-            });
+            function onUp() { isDragging=false; }
+            handle.addEventListener('mousedown',onDown); document.addEventListener('mousemove',onMove); document.addEventListener('mouseup',onUp);
+            handle.addEventListener('touchstart',onDown,{passive:false}); document.addEventListener('touchmove',onMove,{passive:false}); document.addEventListener('touchend',onUp);
+            document.getElementById('close-panel-btn').addEventListener('click',()=>{ panel.style.display='none'; document.getElementById('open-panel-btn').style.display='flex'; });
+            document.getElementById('open-panel-btn').addEventListener('click',()=>{ panel.style.display='flex'; document.getElementById('open-panel-btn').style.display='none'; });
         }
 
-        /* =========================================
-           UI コントロールパネルの表示制御
-           ========================================= */
         function updateControlPanel() {
-            const editBlocks = document.querySelectorAll('.edit-block');
-            const noSelBlock = document.getElementById('block-no-selection');
-
-            if (!selectedId) {
-                editBlocks.forEach(el => el.style.display = 'none');
-                noSelBlock.style.display = 'block';
-                return;
-            }
-
-            const device = devices.find(d => d.id === selectedId);
-            if (!device) return;
-
-            ['block-header', 'block-power', 'block-color', 'block-brightness', 'block-light-list', 'block-switch-list', 'block-delete'].forEach(id => {
-                document.getElementById(id).style.display = 'block';
-            });
-            noSelBlock.style.display = 'none';
-
-            document.getElementById('selected-label').textContent = device.label;
-            document.getElementById('color-slider').value = device.color;
-            document.getElementById('brightness-slider').value = device.brightness;
-
-            const activeLight = (selectedType === 'light') ? device.lights.find(l => l.id === selectedSubId) : null;
-            const activeSwitch = (selectedType === 'switch') ? device.switches.find(s => s.id === selectedSubId) : null;
-            
-            document.getElementById('block-select-msg').style.display = (!activeLight && !activeSwitch) ? 'block' : 'none';
-            document.getElementById('block-size-point').style.display = (activeLight && activeLight.type === 'point') ? 'block' : 'none';
-            document.getElementById('block-size-line').style.display = (activeLight && activeLight.type === 'line') ? 'block' : 'none';
-            document.getElementById('block-shape-switch').style.display = activeSwitch ? 'block' : 'none';
-
+            const editBlocks=document.querySelectorAll('.edit-block');
+            const noSelBlock=document.getElementById('block-no-selection');
+            if (!selectedId) { editBlocks.forEach(el=>el.style.display='none'); noSelBlock.style.display='block'; return; }
+            const device=devices.find(d=>d.id===selectedId); if (!device) return;
+            ['block-header','block-power','block-color','block-brightness','block-light-list','block-switch-list','block-delete'].forEach(id=>{document.getElementById(id).style.display='block';});
+            noSelBlock.style.display='none';
+            document.getElementById('selected-label').textContent=device.label;
+            document.getElementById('color-slider').value=device.color;
+            document.getElementById('brightness-slider').value=device.brightness;
+            const activeLight=(selectedType==='light')?device.lights.find(l=>l.id===selectedSubId):null;
+            const activeSwitch=(selectedType==='switch')?device.switches.find(s=>s.id===selectedSubId):null;
+            document.getElementById('block-select-msg').style.display=(!activeLight&&!activeSwitch)?'block':'none';
+            document.getElementById('block-size-point').style.display=(activeLight&&activeLight.type==='point')?'block':'none';
+            document.getElementById('block-size-line').style.display=(activeLight&&activeLight.type==='line')?'block':'none';
+            document.getElementById('block-shape-switch').style.display=activeSwitch?'block':'none';
             if (activeLight) {
-                if (activeLight.type === 'point') {
-                    document.getElementById('size-point-slider').value = activeLight.width;
-                } else {
-                    document.getElementById('width-line-slider').value = activeLight.width;
-                    document.getElementById('height-line-slider').value = activeLight.height;
-                    document.getElementById('rotation-line-slider').value = activeLight.rotation || 0;
-                }
-            } else if (activeSwitch) {
-                document.getElementById('shape-switch-select').value = activeSwitch.shape || 'square';
-            }
-
-            const lightListContainer = document.getElementById('light-list');
-            lightListContainer.innerHTML = '';
-            device.lights.forEach((lt, index) => {
-                const item = document.createElement('div');
-                item.className = 'switch-list-item';
-                if (selectedType === 'light' && selectedSubId === lt.id) item.style.borderLeft = '4px solid #FF5722';
-                const isOnlyOne = device.lights.length <= 1;
-                item.innerHTML = `<span style="cursor: pointer; flex: 1;" class="list-label">💡 照明${index+1} (${lt.type === 'line' ? 'ライン' : '丸型'})</span><button class="btn-small" ${isOnlyOne ? 'disabled' : ''}>削除</button>`;
-                item.querySelector('.list-label').addEventListener('click', () => { selectedType = 'light'; selectedSubId = lt.id; updateAllDOMStyles(); updateControlPanel(); updateDimmerPopupPosition(); });
-                if (!isOnlyOne) item.querySelector('button').addEventListener('click', () => { device.lights = device.lights.filter(l => l.id !== lt.id); if (selectedSubId === lt.id) selectedSubId = device.lights[0].id; renderAll(); updateControlPanel(); });
-                lightListContainer.appendChild(item);
+                if (activeLight.type==='point') { document.getElementById('size-point-slider').value=activeLight.width; }
+                else { document.getElementById('width-line-slider').value=activeLight.width; document.getElementById('height-line-slider').value=activeLight.height; document.getElementById('rotation-line-slider').value=activeLight.rotation||0; }
+            } else if (activeSwitch) { document.getElementById('shape-switch-select').value=activeSwitch.shape||'square'; }
+            const ll=document.getElementById('light-list'); ll.innerHTML='';
+            device.lights.forEach((lt,i)=>{
+                const item=document.createElement('div'); item.className='switch-list-item';
+                if (selectedType==='light'&&selectedSubId===lt.id) item.style.borderLeft='4px solid #FF5722';
+                const only=device.lights.length<=1;
+                item.innerHTML=`<span style="cursor:pointer;flex:1;" class="list-label">💡 照明${i+1} (${lt.type==='line'?'ライン':'丸型'})</span><button class="btn-small" ${only?'disabled':''}>削除</button>`;
+                item.querySelector('.list-label').addEventListener('click',()=>{selectedType='light';selectedSubId=lt.id;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();});
+                if (!only) item.querySelector('button').addEventListener('click',()=>{device.lights=device.lights.filter(l=>l.id!==lt.id);if(selectedSubId===lt.id)selectedSubId=device.lights[0].id;renderAll();updateControlPanel();});
+                ll.appendChild(item);
             });
-
-            const switchListContainer = document.getElementById('switch-list');
-            switchListContainer.innerHTML = '';
-            device.switches.forEach((sw, index) => {
-                const item = document.createElement('div');
-                item.className = 'switch-list-item';
-                if (selectedType === 'switch' && selectedSubId === sw.id) item.style.borderLeft = '4px solid #FF5722';
-                const isOnlyOne = device.switches.length <= 1;
-                let shapeName = sw.shape === 'triangle-down' ? '(センサー)' : sw.shape === 'triangle-up' ? '(調光)' : '(通常)';
-                item.innerHTML = `<span style="cursor: pointer; flex: 1;" class="list-label">📍 ${sw.label} ${shapeName}</span><button class="btn-small" ${isOnlyOne ? 'disabled' : ''}>削除</button>`;
-                item.querySelector('.list-label').addEventListener('click', () => { selectedType = 'switch'; selectedSubId = sw.id; updateAllDOMStyles(); updateControlPanel(); updateDimmerPopupPosition(); });
-                if (!isOnlyOne) item.querySelector('button').addEventListener('click', () => { device.switches = device.switches.filter(s => s.id !== sw.id); if (selectedSubId === sw.id) selectedSubId = device.switches[0].id; renderAll(); updateControlPanel(); });
-                switchListContainer.appendChild(item);
+            const sl=document.getElementById('switch-list'); sl.innerHTML='';
+            device.switches.forEach((sw,i)=>{
+                const item=document.createElement('div'); item.className='switch-list-item';
+                if (selectedType==='switch'&&selectedSubId===sw.id) item.style.borderLeft='4px solid #FF5722';
+                const only=device.switches.length<=1;
+                let sn=sw.shape==='triangle-down'?'(センサー)':sw.shape==='triangle-up'?'(調光)':'(通常)';
+                item.innerHTML=`<span style="cursor:pointer;flex:1;" class="list-label">📍 ${sw.label} ${sn}</span><button class="btn-small" ${only?'disabled':''}>削除</button>`;
+                item.querySelector('.list-label').addEventListener('click',()=>{selectedType='switch';selectedSubId=sw.id;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();});
+                if (!only) item.querySelector('button').addEventListener('click',()=>{device.switches=device.switches.filter(s=>s.id!==sw.id);if(selectedSubId===sw.id)selectedSubId=device.switches[0].id;renderAll();updateControlPanel();});
+                sl.appendChild(item);
             });
         }
 
-        /* =========================================
-           イベントリスナー等
-           ========================================= */
-        document.getElementById('toggle-power-btn').addEventListener('click', () => { const device = devices.find(d => d.id === selectedId); if (device) { device.isOn = !device.isOn; updateAllDOMStyles(); } });
-        document.getElementById('color-slider').addEventListener('input', (e) => { const device = devices.find(d => d.id === selectedId); if (device) { device.color = parseInt(e.target.value); updateAllDOMStyles(); } });
-        document.getElementById('brightness-slider').addEventListener('input', (e) => {
-            const device = devices.find(d => d.id === selectedId);
-            if (device) { device.brightness = parseInt(e.target.value); document.getElementById('popup-brightness-slider').value = device.brightness; updateAllDOMStyles(); }
-        });
+        document.getElementById('toggle-power-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){d.isOn=!d.isOn;updateAllDOMStyles();}});
+        document.getElementById('color-slider').addEventListener('input',e=>{const d=devices.find(d=>d.id===selectedId);if(d){d.color=parseInt(e.target.value);updateAllDOMStyles();}});
+        document.getElementById('brightness-slider').addEventListener('input',e=>{const d=devices.find(d=>d.id===selectedId);if(d){d.brightness=parseInt(e.target.value);document.getElementById('popup-brightness-slider').value=d.brightness;updateAllDOMStyles();}});
 
-        function updateActiveLightSetting(key, value) {
-            if (selectedType !== 'light' || !selectedSubId) return;
-            const device = devices.find(d => d.id === selectedId);
-            const lt = device.lights.find(l => l.id === selectedSubId);
-            if (lt) { lt[key] = value; if (key === 'width' && lt.type === 'point') lt.height = value; updateAllDOMStyles(); }
+        function updateActiveLightSetting(key,value) {
+            if (selectedType!=='light'||!selectedSubId) return;
+            const device=devices.find(d=>d.id===selectedId);
+            const lt=device.lights.find(l=>l.id===selectedSubId);
+            if (lt) { lt[key]=value; if(key==='width'&&lt.type==='point') lt.height=value; updateAllDOMStyles(); }
         }
-        document.getElementById('size-point-slider').addEventListener('input', e => updateActiveLightSetting('width', parseInt(e.target.value)));
-        document.getElementById('width-line-slider').addEventListener('input', e => updateActiveLightSetting('width', parseInt(e.target.value)));
-        document.getElementById('height-line-slider').addEventListener('input', e => updateActiveLightSetting('height', parseInt(e.target.value)));
-        document.getElementById('rotation-line-slider').addEventListener('input', e => updateActiveLightSetting('rotation', parseInt(e.target.value)));
-
-        document.getElementById('shape-switch-select').addEventListener('change', (e) => {
-            if (selectedType === 'switch' && selectedSubId) {
-                const device = devices.find(d => d.id === selectedId);
-                const sw = device.switches.find(s => s.id === selectedSubId);
-                if (sw) { sw.shape = e.target.value; updateAllDOMStyles(); updateControlPanel(); updateDimmerPopupPosition(); }
+        document.getElementById('size-point-slider').addEventListener('input',e=>updateActiveLightSetting('width',parseInt(e.target.value)));
+        document.getElementById('width-line-slider').addEventListener('input',e=>updateActiveLightSetting('width',parseInt(e.target.value)));
+        document.getElementById('height-line-slider').addEventListener('input',e=>updateActiveLightSetting('height',parseInt(e.target.value)));
+        document.getElementById('rotation-line-slider').addEventListener('input',e=>updateActiveLightSetting('rotation',parseInt(e.target.value)));
+        document.getElementById('shape-switch-select').addEventListener('change',e=>{
+            if (selectedType==='switch'&&selectedSubId) {
+                const d=devices.find(d=>d.id===selectedId); const sw=d.switches.find(s=>s.id===selectedSubId);
+                if (sw) { sw.shape=e.target.value; updateAllDOMStyles(); updateControlPanel(); updateDimmerPopupPosition(); }
             }
         });
 
-        document.getElementById('add-point-btn').addEventListener('click', () => addDevice('point'));
-        document.getElementById('add-line-btn').addEventListener('click', () => addDevice('line'));
+        document.getElementById('add-point-btn').addEventListener('click',()=>addDevice('point'));
+        document.getElementById('add-line-btn').addEventListener('click',()=>addDevice('line'));
         function addDevice(type) {
-            const newId = 'dev-' + Date.now(); const baseLabel = (type === 'line' ? 'L' : 'S') + deviceCounter++;
-            devices.push({
-                id: newId, label: baseLabel, isOn: true, color: 50, brightness: 100,
-                lights: [{ id: 'l-' + Date.now(), type: type, width: type === 'line' ? 200 : 44, height: type === 'line' ? 15 : 44, rotation: 0, top: "50%", left: "55%" }],
-                switches: [{ id: 'sw-' + Date.now(), label: baseLabel, shape: 'square', top: "50%", left: "45%" }]
-            });
-            selectedId = newId; selectedType = 'light'; selectedSubId = devices[devices.length-1].lights[0].id;
+            const newId='dev-'+Date.now(); const baseLabel=(type==='line'?'L':'S')+deviceCounter++;
+            devices.push({id:newId,label:baseLabel,isOn:true,color:50,brightness:100,
+                lights:[{id:'l-'+Date.now(),type:type,width:type==='line'?200:44,height:type==='line'?15:44,rotation:0,top:"50%",left:"55%"}],
+                switches:[{id:'sw-'+Date.now(),label:baseLabel,shape:'square',top:"50%",left:"45%"}]});
+            selectedId=newId; selectedType='light'; selectedSubId=devices[devices.length-1].lights[0].id;
             renderAll(); updateControlPanel(); updateDimmerPopupPosition();
         }
+        document.getElementById('add-linked-point-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){const id='l-'+Date.now();d.lights.push({id,type:'point',width:44,height:44,rotation:0,top:"50%",left:"50%"});selectedType='light';selectedSubId=id;renderAll();updateControlPanel();}});
+        document.getElementById('add-linked-line-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){const id='l-'+Date.now();d.lights.push({id,type:'line',width:200,height:15,rotation:0,top:"50%",left:"50%"});selectedType='light';selectedSubId=id;renderAll();updateControlPanel();}});
+        document.getElementById('add-switch-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){const id='sw-'+Date.now();d.switches.push({id,label:`${d.label}-${d.switches.length+1}`,shape:'square',top:"50%",left:"50%"});selectedType='switch';selectedSubId=id;renderAll();updateControlPanel();updateDimmerPopupPosition();}});
+        document.getElementById('delete-btn').addEventListener('click',()=>{if(!selectedId||!confirm('この照明とすべての連動スイッチを削除しますか？'))return;devices=devices.filter(d=>d.id!==selectedId);selectedId=selectedSubId=selectedType=null;renderAll();updateControlPanel();updateDimmerPopupPosition();});
 
-        document.getElementById('add-linked-point-btn').addEventListener('click', () => { const d = devices.find(d => d.id === selectedId); if(d) { const newId = 'l-' + Date.now(); d.lights.push({ id: newId, type: 'point', width: 44, height: 44, rotation: 0, top: "50%", left: "50%" }); selectedType = 'light'; selectedSubId = newId; renderAll(); updateControlPanel(); } });
-        document.getElementById('add-linked-line-btn').addEventListener('click', () => { const d = devices.find(d => d.id === selectedId); if(d) { const newId = 'l-' + Date.now(); d.lights.push({ id: newId, type: 'line', width: 200, height: 15, rotation: 0, top: "50%", left: "50%" }); selectedType = 'light'; selectedSubId = newId; renderAll(); updateControlPanel(); } });
-        document.getElementById('add-switch-btn').addEventListener('click', () => { const d = devices.find(d => d.id === selectedId); if(d) { const newSwId = 'sw-' + Date.now(); d.switches.push({ id: newSwId, label: `${d.label}-${d.switches.length + 1}`, shape: 'square', top: "50%", left: "50%" }); selectedType = 'switch'; selectedSubId = newSwId; renderAll(); updateControlPanel(); updateDimmerPopupPosition(); } });
-        document.getElementById('delete-btn').addEventListener('click', () => { if (!selectedId || !confirm('この照明とすべての連動スイッチを削除しますか？')) return; devices = devices.filter(d => d.id !== selectedId); selectedId = selectedSubId = selectedType = null; renderAll(); updateControlPanel(); updateDimmerPopupPosition(); });
-
-        /* =========================================
-           背景・クラウド連携等
-           ========================================= */
-        function compressImage(src, callback) {
-            const img = new Image();
-            img.onload = () => {
-                let w = img.width, h = img.height, max = 1200;
-                if (w > max || h > max) { if (w > h) { h = Math.round((h * max) / w); w = max; } else { w = Math.round((w * max) / h); h = max; } }
-                const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
-                const ctx = canvas.getContext('2d'); ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
-                callback(canvas.toDataURL('image/jpeg', 0.6));
+        function compressImage(src,callback) {
+            const img=new Image();
+            img.onload=()=>{
+                let w=img.width,h=img.height,max=1200;
+                if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+                const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+                const ctx=canvas.getContext('2d'); ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,w,h); ctx.drawImage(img,0,0,w,h);
+                callback(canvas.toDataURL('image/jpeg',0.6));
             };
-            img.onerror = () => callback(src); img.src = src;
+            img.onerror=()=>callback(src); img.src=src;
         }
 
-        window.pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
-        if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        document.getElementById('bg-upload').addEventListener('change', function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            const imgEl = document.getElementById('floorplan-img');
-            document.getElementById('loading-overlay').style.display = 'flex';
-            if (file.type === 'application/pdf') {
-                const reader = new FileReader();
-                reader.onload = async function() {
+        window.pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
+        if(window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        document.getElementById('bg-upload').addEventListener('change',function(e){
+            const file=e.target.files[0]; if(!file) return;
+            document.getElementById('loading-overlay').style.display='flex';
+            if (file.type==='application/pdf') {
+                const reader=new FileReader();
+                reader.onload=async function(){
                     try {
-                        const pdf = await window.pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
-                        const page = await pdf.getPage(1);
-                        const viewport = page.getViewport({scale: 1.5}); 
-                        const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-                        canvas.height = viewport.height; canvas.width = viewport.width;
-                        await page.render({canvasContext: ctx, viewport: viewport}).promise;
-                        compressImage(canvas.toDataURL('image/png'), (compressed) => { imgEl.src = compressed; imgEl.style.display = 'block'; document.getElementById('loading-overlay').style.display = 'none'; });
-                    } catch (err) { alert('PDFの読み込みに失敗しました。'); document.getElementById('loading-overlay').style.display = 'none'; }
+                        const pdf=await window.pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
+                        const page=await pdf.getPage(1);
+                        const viewport=page.getViewport({scale:1.5});
+                        const canvas=document.createElement('canvas'); const ctx=canvas.getContext('2d');
+                        canvas.height=viewport.height; canvas.width=viewport.width;
+                        await page.render({canvasContext:ctx,viewport}).promise;
+                        compressImage(canvas.toDataURL('image/png'),compressed=>{
+                            imgEl.src=compressed; imgEl.style.display='block';
+                            document.getElementById('loading-overlay').style.display='none';
+                        });
+                    } catch(err){alert('PDFの読み込みに失敗しました。');document.getElementById('loading-overlay').style.display='none';}
                 };
                 reader.readAsArrayBuffer(file);
             } else if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) { compressImage(e.target.result, (compressed) => { imgEl.src = compressed; imgEl.style.display = 'block'; document.getElementById('loading-overlay').style.display = 'none'; }); };
+                const reader=new FileReader();
+                reader.onload=function(e){compressImage(e.target.result,compressed=>{imgEl.src=compressed;imgEl.style.display='block';document.getElementById('loading-overlay').style.display='none';});};
                 reader.readAsDataURL(file);
-            } else { alert('画像またはPDFを選択してください。'); document.getElementById('loading-overlay').style.display = 'none'; }
+            } else {alert('画像またはPDFを選択してください。');document.getElementById('loading-overlay').style.display='none';}
         });
 
-        document.getElementById('share-btn').addEventListener('click', async () => {
-            if (!user || !db) { 
-                alert("【お知らせ】\nURL共有機能を使うには、コード内にご自身のFirebase(データベース)の設定が必要です。\n\n※「バックアップと復元」の機能を使えば、ファイル経由でデータのやり取りが可能です。"); 
-                return; 
-            }
-            const btn = document.getElementById('share-btn'); btn.textContent = '保存中...'; btn.disabled = true;
+        document.getElementById('share-btn').addEventListener('click',async()=>{
+            if(!user||!db){alert("【お知らせ】\nURL共有機能を使うには、コード内にご自身のFirebaseの設定が必要です。\n\n「バックアップと復元」の機能を使えば、ファイル経由でデータのやり取りが可能です。");return;}
+            const btn=document.getElementById('share-btn'); btn.textContent='保存中...'; btn.disabled=true;
             try {
-                const imgSrc = document.getElementById('floorplan-img').src;
-                const bgImageToSave = imgSrc.includes('placehold') ? null : imgSrc;
-                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc();
-                await docRef.set({ devices: devices, bgImage: bgImageToSave, createdAt: new Date().toISOString() });
-                document.getElementById('share-url').value = window.location.origin + window.location.pathname + '?share=' + docRef.id;
-                document.getElementById('share-link-container').style.display = 'block'; btn.textContent = 'URLを生成しました';
-            } catch (err) { alert("保存に失敗しました。"); btn.textContent = 'URLを生成する'; btn.disabled = false; }
+                const imgSrc=imgEl.src;
+                const docRef=db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc();
+                await docRef.set({devices,bgImage:imgSrc.includes('placehold')?null:imgSrc,createdAt:new Date().toISOString()});
+                document.getElementById('share-url').value=window.location.origin+window.location.pathname+'?share='+docRef.id;
+                document.getElementById('share-link-container').style.display='block'; btn.textContent='URLを生成しました';
+            } catch(err){alert("保存に失敗しました。");btn.textContent='URLを生成する';btn.disabled=false;}
         });
-
-        document.getElementById('copy-btn').addEventListener('click', () => {
+        document.getElementById('copy-btn').addEventListener('click',()=>{
             document.getElementById('share-url').select(); document.execCommand('copy');
-            const btn = document.getElementById('copy-btn'); btn.textContent = 'コピー完了'; setTimeout(() => btn.textContent = 'コピー', 2000);
+            const btn=document.getElementById('copy-btn'); btn.textContent='コピー完了'; setTimeout(()=>btn.textContent='コピー',2000);
         });
 
         async function loadFromCloud(shareId) {
-            if (!user || !db) return;
+            if(!user||!db) return;
             try {
-                const docSnap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc(shareId).get();
-                if (docSnap.exists) {
-                    const data = docSnap.data();
-                    if (data.devices) devices = migrateDevices(data.devices);
-                    if (data.bgImage) { document.getElementById('floorplan-img').src = data.bgImage; document.getElementById('floorplan-img').style.display = 'block'; }
-                } else {
-                    console.warn("共有データが見つかりません。");
-                }
-            } catch (err) { console.error("Cloud Load Error:", err); }
+                const docSnap=await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc(shareId).get();
+                if(docSnap.exists){const data=docSnap.data();if(data.devices)devices=migrateDevices(data.devices);if(data.bgImage){imgEl.src=data.bgImage;imgEl.style.display='block';}}
+            } catch(err){console.error(err);}
         }
 
-        document.getElementById('export-btn').addEventListener('click', () => {
-            const imgSrc = document.getElementById('floorplan-img').src;
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ devices: devices, bgImage: imgSrc.includes('placehold') ? null : imgSrc, version: "2.0" }));
-            const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", "lighting_layout.json"); document.body.appendChild(a); a.click(); a.remove();
+        // ★★★ バックアップ書き出し：画像サイズ情報も一緒に保存 ★★★
+        document.getElementById('export-btn').addEventListener('click',()=>{
+            const imgSrc=imgEl.src;
+            const exportData={
+                devices,
+                bgImage: imgSrc.includes('placehold')?null:imgSrc,
+                // 画像の自然サイズを保存（復元時のズレ防止に使用）
+                imageNaturalWidth: imgEl.naturalWidth||null,
+                imageNaturalHeight: imgEl.naturalHeight||null,
+                version: "3.0"
+            };
+            const dataStr="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(exportData));
+            const a=document.createElement('a'); a.setAttribute("href",dataStr); a.setAttribute("download","lighting_layout.json");
+            document.body.appendChild(a); a.click(); a.remove();
         });
 
-        document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
-        document.getElementById('import-file').addEventListener('change', function(e) {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
+        document.getElementById('import-btn').addEventListener('click',()=>document.getElementById('import-file').click());
+        document.getElementById('import-file').addEventListener('change',function(e){
+            const file=e.target.files[0]; if(!file) return;
+            const reader=new FileReader();
+            reader.onload=function(event){
                 try {
-                    const data = JSON.parse(event.target.result);
-                    if (data.devices) devices = migrateDevices(data.devices);
-                    if (data.bgImage) { document.getElementById('floorplan-img').src = data.bgImage; document.getElementById('floorplan-img').style.display = 'block'; }
-                    selectedId = selectedSubId = selectedType = null; renderAll(); updateControlPanel(); updateDimmerPopupPosition(); alert('データを復元しました。');
-                } catch(err) { alert('読み込みに失敗しました。'); console.error(err); }
+                    const data=JSON.parse(event.target.result);
+                    if (data.devices) devices=migrateDevices(data.devices);
+                    selectedId=selectedSubId=selectedType=null;
+
+                    if (data.bgImage) {
+                        // 画像をリセットしてから新しいsrcをセット
+                        imgEl.style.display='none';
+                        imgEl.src='';
+
+                        // ★★★ 画像の完全ロード完了後にレイヤー計算→配置 ★★★
+                        const onLoaded = function() {
+                            imgEl.removeEventListener('load', onLoaded);
+                            imgEl.style.display='block';
+                            // レイアウトが確定するまで少し待ってから計算
+                            requestAnimationFrame(()=>{
+                                requestAnimationFrame(()=>{
+                                    updateLayerBounds();
+                                    renderAll();
+                                    updateControlPanel();
+                                    updateDimmerPopupPosition();
+                                    alert('データを復元しました。');
+                                });
+                            });
+                        };
+                        imgEl.addEventListener('load', onLoaded);
+                        imgEl.src = data.bgImage;
+                    } else {
+                        updateLayerBounds();
+                        renderAll();
+                        updateControlPanel();
+                        updateDimmerPopupPosition();
+                        alert('データを復元しました。');
+                    }
+                } catch(err){alert('読み込みに失敗しました。');console.error(err);}
             };
-            reader.readAsText(file); e.target.value = '';
+            reader.readAsText(file); e.target.value='';
         });
 
         init();

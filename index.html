@@ -23,67 +23,67 @@
         .panel-block { position:relative; margin-bottom:12px; background:#fff; border-radius:8px; border:1px solid transparent; transition:border-color 0.2s; }
         .panel-block:hover { border-color:#ddd; }
         .block-handle { position:absolute; top:8px; right:8px; width:24px; height:24px; cursor:grab; display:flex; justify-content:center; align-items:center; color:#aaa; border-radius:4px; z-index:10; }
-        .block-handle:hover { background:rgba(0,0,0,0.05); color:#555; }
         .sortable-ghost { opacity:0.4; background:#f9f9f9; border:1px dashed #bbb; }
-        @media (max-width:768px) { .app-container { padding:10px; } .map-section { padding:10px; } .control-section { width:calc(100% - 40px); max-height:50vh; top:auto; bottom:20px; left:20px; right:20px; } }
+        @media (max-width:768px) { .app-container{padding:10px;} .map-section{padding:10px;} .control-section{width:calc(100% - 40px);max-height:50vh;top:auto;bottom:20px;left:20px;right:20px;} }
 
-        /* =========================================
-           map-container と interactive-layer
-           ★座標系をコンテナ全体に統一★
-           ========================================= */
         #map-container { position:relative; width:100%; flex:1; background-color:#fafafa; border:2px dashed #ddd; border-radius:8px; overflow:hidden; }
         #floorplan-img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
-        /* interactive-layerは常にコンテナ全体と同じサイズ・位置 */
-        #interactive-layer { position:absolute; top:0; left:0; width:100%; height:100%; }
+        /*
+         * ★★★ 重要 ★★★
+         * interactive-layer は JS で「画像の実描画領域」に合わせて
+         * position/size を動的に設定する。
+         * 照明・スイッチの % は この layer 内の相対位置。
+         * これにより縦長・横長どちらの画像でもズレない。
+         */
+        #interactive-layer { position:absolute; }
 
-        h2 { margin:0; font-size:1.1rem; }
-        h3 { font-size:1rem; color:#555; margin:0; padding-top:5px; }
-        .control-group { margin:0; }
-        .control-group label { display:block; margin-bottom:8px; font-weight:600; font-size:0.9rem; }
-        input[type=range] { width:100%; cursor:pointer; }
-        .btn { display:block; width:100%; padding:12px; background-color:#4CAF50; color:white; border:none; border-radius:6px; font-size:1rem; font-weight:bold; cursor:pointer; transition:background 0.2s; margin-bottom:10px; }
-        .btn:hover { background-color:#45a049; }
-        .btn:disabled { background-color:#aaa; cursor:not-allowed; }
-        .btn.btn-primary { background-color:#2196F3; margin-bottom:0; }
-        .btn.btn-primary:hover { background-color:#1976D2; }
-        .btn.btn-secondary { background-color:#FF9800; }
-        .btn.btn-secondary:hover { background-color:#F57C00; }
-        .btn.btn-danger { background-color:#f44336; margin-bottom:0; }
-        .btn.btn-danger:hover { background-color:#d32f2f; }
-        .padded-box { padding:15px; border-radius:8px; padding-right:35px; }
-        #no-selection-msg { color:#777; font-size:0.95rem; line-height:1.6; background:#f9f9f9; padding:15px; border-radius:8px; border:1px solid #eee; margin:0; }
-
-        .switch { position:absolute; width:36px; height:36px; display:flex; justify-content:center; align-items:center; cursor:grab; transform:translate(-50%,-50%); user-select:none; z-index:10; --sw-bg:#fff; --sw-text:#333; --sw-border:#ccc; color:var(--sw-text); font-size:14px; font-weight:bold; }
-        .switch[data-shape="square"] { background-color:var(--sw-bg); border:2px solid var(--sw-border); border-radius:8px; box-shadow:0 3px 6px rgba(0,0,0,0.2); }
-        .switch[data-shape="triangle-down"] { background-color:transparent; align-items:flex-start; padding-top:3px; }
-        .switch[data-shape="triangle-down"]::before { content:""; position:absolute; top:0; left:0; width:100%; height:100%; background-color:var(--sw-border); clip-path:polygon(0% 0%,100% 0%,50% 100%); z-index:-2; }
-        .switch[data-shape="triangle-down"]::after { content:""; position:absolute; top:2px; left:2px; width:calc(100% - 4px); height:calc(100% - 4px); background-color:var(--sw-bg); clip-path:polygon(0% 0%,100% 0%,50% 100%); z-index:-1; }
-        .switch[data-shape="triangle-up"] { background-color:transparent; align-items:flex-end; padding-bottom:2px; }
-        .switch[data-shape="triangle-up"]::before { content:""; position:absolute; top:0; left:0; width:100%; height:100%; background-color:var(--sw-border); clip-path:polygon(50% 0%,0% 100%,100% 100%); z-index:-2; }
-        .switch[data-shape="triangle-up"]::after { content:""; position:absolute; top:2px; left:2px; width:calc(100% - 4px); height:calc(100% - 4px); background-color:var(--sw-bg); clip-path:polygon(50% 12%,4% 94%,96% 94%); z-index:-1; }
-        .light { position:absolute; background-color:#e0e0e0; --rotation:0deg; transform:translate(-50%,-50%) rotate(var(--rotation)); border:2px solid #b0b0b0; z-index:5; cursor:grab; transition:background-color 0.3s,border-color 0.3s; }
-        .light.point { border-radius:50%; }
-        .light.line { border-radius:6px; }
-        .rotation-handle { position:absolute; right:-30px; top:50%; transform:translateY(-50%); width:24px; height:24px; background-color:#FF9800; border:2px solid #fff; border-radius:50%; cursor:alias; display:none; z-index:20; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
-        .light.line.active-sub .rotation-handle { display:block; }
-        .switch.dragging { cursor:grabbing; transform:translate(-50%,-50%) scale(1.1); z-index:100; }
-        .light.dragging { cursor:grabbing; transform:translate(-50%,-50%) rotate(var(--rotation)) scale(1.1); z-index:100; }
-        .switch[data-shape="square"].selected,.light.selected { outline:2px dashed #2196F3; outline-offset:4px; }
-        .switch[data-shape="square"].active-sub,.light.active-sub { outline:3px solid #FF5722; outline-offset:4px; z-index:15; }
-        .switch[data-shape="triangle-down"].selected,.switch[data-shape="triangle-up"].selected { --sw-border:#2196F3; }
-        .switch[data-shape="triangle-down"].active-sub,.switch[data-shape="triangle-up"].active-sub { --sw-border:#FF5722; z-index:15; }
-        #dimmer-popup { display:none; position:absolute; background:white; border:2px solid #FF5722; border-radius:8px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:200; transform:translate(-50%,25px); width:140px; }
-        #dimmer-popup::before { content:"▲"; position:absolute; top:-14px; left:50%; transform:translateX(-50%); color:#FF5722; font-size:16px; }
-        .switch-list { margin-top:10px; }
-        .switch-list-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#f9f9f9; border:1px solid #ddd; border-radius:6px; margin-bottom:8px; font-size:0.9rem; }
-        .switch-list-item:hover { background:#f0f0f0; }
-        .btn-small { padding:4px 8px; font-size:0.8rem; border:none; border-radius:4px; cursor:pointer; background-color:#f44336; color:white; }
-        .btn-small:disabled { background-color:#ccc; cursor:not-allowed; }
-        .btn-outline { background-color:transparent; border:1px solid #2196F3; color:#2196F3; padding:8px; width:100%; border-radius:6px; cursor:pointer; font-weight:bold; flex:1; text-align:center; }
-        .btn-outline:hover { background-color:#e3f2fd; }
-        #loading-overlay { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; display:none; justify-content:center; align-items:center; font-size:1.5rem; font-weight:bold; color:#333; }
-        #open-panel-btn { position:absolute; top:25px; right:25px; z-index:990; padding:10px 15px; background:rgba(255,255,255,0.95); border:1px solid rgba(0,0,0,0.1); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); cursor:pointer; font-weight:bold; display:none; align-items:center; gap:5px; }
-        @media (max-width:768px) { #open-panel-btn { top:auto; bottom:20px; right:20px; } }
+        h2{margin:0;font-size:1.1rem;}
+        h3{font-size:1rem;color:#555;margin:0;padding-top:5px;}
+        .control-group{margin:0;}
+        .control-group label{display:block;margin-bottom:8px;font-weight:600;font-size:0.9rem;}
+        input[type=range]{width:100%;cursor:pointer;}
+        .btn{display:block;width:100%;padding:12px;background-color:#4CAF50;color:white;border:none;border-radius:6px;font-size:1rem;font-weight:bold;cursor:pointer;transition:background 0.2s;margin-bottom:10px;}
+        .btn:hover{background-color:#45a049;}
+        .btn:disabled{background-color:#aaa;cursor:not-allowed;}
+        .btn.btn-primary{background-color:#2196F3;margin-bottom:0;}
+        .btn.btn-primary:hover{background-color:#1976D2;}
+        .btn.btn-secondary{background-color:#FF9800;}
+        .btn.btn-secondary:hover{background-color:#F57C00;}
+        .btn.btn-danger{background-color:#f44336;margin-bottom:0;}
+        .btn.btn-danger:hover{background-color:#d32f2f;}
+        .padded-box{padding:15px;border-radius:8px;padding-right:35px;}
+        #no-selection-msg{color:#777;font-size:0.95rem;line-height:1.6;background:#f9f9f9;padding:15px;border-radius:8px;border:1px solid #eee;margin:0;}
+        .switch{position:absolute;width:36px;height:36px;display:flex;justify-content:center;align-items:center;cursor:grab;transform:translate(-50%,-50%);user-select:none;z-index:10;--sw-bg:#fff;--sw-text:#333;--sw-border:#ccc;color:var(--sw-text);font-size:14px;font-weight:bold;}
+        .switch[data-shape="square"]{background-color:var(--sw-bg);border:2px solid var(--sw-border);border-radius:8px;box-shadow:0 3px 6px rgba(0,0,0,0.2);}
+        .switch[data-shape="triangle-down"]{background-color:transparent;align-items:flex-start;padding-top:3px;}
+        .switch[data-shape="triangle-down"]::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;background-color:var(--sw-border);clip-path:polygon(0% 0%,100% 0%,50% 100%);z-index:-2;}
+        .switch[data-shape="triangle-down"]::after{content:"";position:absolute;top:2px;left:2px;width:calc(100% - 4px);height:calc(100% - 4px);background-color:var(--sw-bg);clip-path:polygon(0% 0%,100% 0%,50% 100%);z-index:-1;}
+        .switch[data-shape="triangle-up"]{background-color:transparent;align-items:flex-end;padding-bottom:2px;}
+        .switch[data-shape="triangle-up"]::before{content:"";position:absolute;top:0;left:0;width:100%;height:100%;background-color:var(--sw-border);clip-path:polygon(50% 0%,0% 100%,100% 100%);z-index:-2;}
+        .switch[data-shape="triangle-up"]::after{content:"";position:absolute;top:2px;left:2px;width:calc(100% - 4px);height:calc(100% - 4px);background-color:var(--sw-bg);clip-path:polygon(50% 12%,4% 94%,96% 94%);z-index:-1;}
+        .light{position:absolute;background-color:#e0e0e0;--rotation:0deg;transform:translate(-50%,-50%) rotate(var(--rotation));border:2px solid #b0b0b0;z-index:5;cursor:grab;transition:background-color 0.3s,border-color 0.3s;}
+        .light.point{border-radius:50%;}
+        .light.line{border-radius:6px;}
+        .rotation-handle{position:absolute;right:-30px;top:50%;transform:translateY(-50%);width:24px;height:24px;background-color:#FF9800;border:2px solid #fff;border-radius:50%;cursor:alias;display:none;z-index:20;box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+        .light.line.active-sub .rotation-handle{display:block;}
+        .switch.dragging{cursor:grabbing;transform:translate(-50%,-50%) scale(1.1);z-index:100;}
+        .light.dragging{cursor:grabbing;transform:translate(-50%,-50%) rotate(var(--rotation)) scale(1.1);z-index:100;}
+        .switch[data-shape="square"].selected,.light.selected{outline:2px dashed #2196F3;outline-offset:4px;}
+        .switch[data-shape="square"].active-sub,.light.active-sub{outline:3px solid #FF5722;outline-offset:4px;z-index:15;}
+        .switch[data-shape="triangle-down"].selected,.switch[data-shape="triangle-up"].selected{--sw-border:#2196F3;}
+        .switch[data-shape="triangle-down"].active-sub,.switch[data-shape="triangle-up"].active-sub{--sw-border:#FF5722;z-index:15;}
+        #dimmer-popup{display:none;position:absolute;background:white;border:2px solid #FF5722;border-radius:8px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:200;transform:translate(-50%,25px);width:140px;}
+        #dimmer-popup::before{content:"▲";position:absolute;top:-14px;left:50%;transform:translateX(-50%);color:#FF5722;font-size:16px;}
+        .switch-list{margin-top:10px;}
+        .switch-list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f9f9f9;border:1px solid #ddd;border-radius:6px;margin-bottom:8px;font-size:0.9rem;}
+        .switch-list-item:hover{background:#f0f0f0;}
+        .btn-small{padding:4px 8px;font-size:0.8rem;border:none;border-radius:4px;cursor:pointer;background-color:#f44336;color:white;}
+        .btn-small:disabled{background-color:#ccc;cursor:not-allowed;}
+        .btn-outline{background-color:transparent;border:1px solid #2196F3;color:#2196F3;padding:8px;width:100%;border-radius:6px;cursor:pointer;font-weight:bold;flex:1;text-align:center;}
+        .btn-outline:hover{background-color:#e3f2fd;}
+        #loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(255,255,255,0.8);z-index:9999;display:none;justify-content:center;align-items:center;font-size:1.5rem;font-weight:bold;color:#333;}
+        #open-panel-btn{position:absolute;top:25px;right:25px;z-index:990;padding:10px 15px;background:rgba(255,255,255,0.95);border:1px solid rgba(0,0,0,0.1);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);cursor:pointer;font-weight:bold;display:none;align-items:center;gap:5px;}
+        @media (max-width:768px){#open-panel-btn{top:auto;bottom:20px;right:20px;}}
     </style>
 </head>
 <body>
@@ -148,10 +148,7 @@
                 </div>
             </div>
             <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-            <div class="panel-block" id="block-no-selection">
-                <div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div>
-                <div id="no-selection-msg">図面上の照明またはスイッチを<strong>クリック</strong>して選択してください。<br><br>💡 <strong>ドラッグ＆ドロップ</strong>で配置を変更できます。</div>
-            </div>
+            <div class="panel-block" id="block-no-selection"><div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div><div id="no-selection-msg">図面上の照明またはスイッチを<strong>クリック</strong>して選択してください。<br><br>💡 <strong>ドラッグ＆ドロップ</strong>で配置を変更できます。</div></div>
             <div class="panel-block edit-block" id="block-header" style="display:none;"><div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div><h3 style="padding:10px 30px 10px 10px;">選択中: <span id="selected-label" style="color:#2196F3;"></span></h3></div>
             <div class="panel-block edit-block" id="block-power" style="display:none;"><div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div><div class="control-group padded-box" style="background:#fafafa;border:1px solid #eee;"><label>電源 (ON / OFF)</label><button id="toggle-power-btn" class="btn btn-primary">切り替え</button></div></div>
             <div class="panel-block edit-block" id="block-color" style="display:none;"><div class="block-handle"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg></div><div class="control-group padded-box" style="background:#fafafa;border:1px solid #eee;"><label>色温度（電球色 ⇔ 昼光色）</label><input type="range" id="color-slider" min="0" max="100" value="50"><div style="display:flex;justify-content:space-between;font-size:0.8rem;color:#777;margin-top:4px;"><span>オレンジ</span><span>白</span><span>青白</span></div></div></div>
@@ -167,311 +164,319 @@
     </div>
 </div>
 <script>
-    const myFirebaseConfig = { apiKey:"YOUR_API_KEY", authDomain:"YOUR_PROJECT_ID.firebaseapp.com", projectId:"YOUR_PROJECT_ID", storageBucket:"YOUR_PROJECT_ID.appspot.com", messagingSenderId:"YOUR_SENDER_ID", appId:"YOUR_APP_ID" };
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'simulator-app-id';
-    let auth, db, user;
-    try {
-        const envConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        let activeConfig = envConfigStr ? JSON.parse(envConfigStr) : myFirebaseConfig;
-        if (activeConfig && activeConfig.apiKey !== "YOUR_API_KEY") {
-            firebase.initializeApp(activeConfig); auth = firebase.auth(); db = firebase.firestore();
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { auth.signInWithCustomToken(__initial_auth_token).catch(console.error); } else { auth.signInAnonymously().catch(console.error); }
-            auth.onAuthStateChanged(u => { user = u; });
-        }
-    } catch(e) { console.error(e); }
+    const myFirebaseConfig={apiKey:"YOUR_API_KEY",authDomain:"YOUR_PROJECT_ID.firebaseapp.com",projectId:"YOUR_PROJECT_ID",storageBucket:"YOUR_PROJECT_ID.appspot.com",messagingSenderId:"YOUR_SENDER_ID",appId:"YOUR_APP_ID"};
+    const appId=typeof __app_id!=='undefined'?__app_id:'simulator-app-id';
+    let auth,db,user;
+    try{const ec=typeof __firebase_config!=='undefined'?__firebase_config:null;let ac=ec?JSON.parse(ec):myFirebaseConfig;if(ac&&ac.apiKey!=="YOUR_API_KEY"){firebase.initializeApp(ac);auth=firebase.auth();db=firebase.firestore();if(typeof __initial_auth_token!=='undefined'&&__initial_auth_token){auth.signInWithCustomToken(__initial_auth_token).catch(console.error);}else{auth.signInAnonymously().catch(console.error);}auth.onAuthStateChanged(u=>{user=u;});}}catch(e){console.error(e);}
 
-    const imgEl = document.getElementById('floorplan-img');
-    const layer = document.getElementById('interactive-layer');
-    const dimmerPopup = document.getElementById('dimmer-popup');
+    const imgEl=document.getElementById('floorplan-img');
+    const mapContainer=document.getElementById('map-container');
+    const layer=document.getElementById('interactive-layer');
+    const dimmerPopup=document.getElementById('dimmer-popup');
 
-    let devices = [
-        { id:"dev-1", label:"S1", isOn:false, color:50, brightness:100, lights:[{id:"l-1-1",type:"point",width:44,height:44,rotation:0,top:"40%",left:"30%"}], switches:[{id:"sw-1-1",label:"S1",shape:"square",top:"60%",left:"20%"}] },
-        { id:"dev-2", label:"S2", isOn:false, color:10, brightness:80, lights:[{id:"l-2-1",type:"point",width:44,height:44,rotation:0,top:"60%",left:"70%"},{id:"l-2-2",type:"point",width:44,height:44,rotation:0,top:"70%",left:"70%"}], switches:[{id:"sw-2-1",label:"S2",shape:"square",top:"80%",left:"60%"},{id:"sw-2-2",label:"S2'",shape:"triangle-down",top:"85%",left:"65%"}] },
-        { id:"dev-3", label:"L1", isOn:true, color:0, brightness:80, lights:[{id:"l-3-1",type:"line",width:250,height:12,rotation:0,top:"15%",left:"50%"}], switches:[{id:"sw-3-1",label:"L1",shape:"triangle-up",top:"25%",left:"50%"}] }
+    /* =====================================================
+       ★★★ 画像の実描画領域を計算してlayerを合わせる ★★★
+       object-fit:contain で表示した画像の実際の描画領域
+       (余白を除いた部分)を計算し、interactive-layerをその
+       領域にぴったり重ねる。
+       照明・スイッチの % はこのlayer内の相対位置なので、
+       どんな画像サイズ・画面サイズでもズレない。
+       ===================================================== */
+    function getImageDrawRect() {
+        const cw=mapContainer.clientWidth, ch=mapContainer.clientHeight;
+        const iw=imgEl.naturalWidth||cw, ih=imgEl.naturalHeight||ch;
+        const scale=Math.min(cw/iw, ch/ih);
+        const drawW=iw*scale, drawH=ih*scale;
+        const drawX=(cw-drawW)/2, drawY=(ch-drawH)/2;
+        return {x:drawX, y:drawY, w:drawW, h:drawH};
+    }
+
+    function updateLayerBounds() {
+        const r=getImageDrawRect();
+        layer.style.left=r.x+'px';
+        layer.style.top=r.y+'px';
+        layer.style.width=r.w+'px';
+        layer.style.height=r.h+'px';
+    }
+
+    imgEl.addEventListener('load',()=>{
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+            updateLayerBounds();
+            renderAll();
+        }));
+    });
+    window.addEventListener('resize',()=>{
+        requestAnimationFrame(()=>{updateLayerBounds();renderAll();});
+    });
+
+    /* =====================================================
+       旧バージョン(v2.0以前)のデータ変換
+       旧データはコンテナ全体基準の%で保存されていた。
+       新データ(v4.0)はlayer(画像描画領域)基準。
+       読み込み時に画像サイズから変換する。
+       ===================================================== */
+    function convertOldCoords(devices, imgNaturalW, imgNaturalH) {
+        // コンテナサイズを取得
+        const cw=mapContainer.clientWidth, ch=mapContainer.clientHeight;
+        if (!imgNaturalW||!imgNaturalH) return devices;
+        const scale=Math.min(cw/imgNaturalW, ch/imgNaturalH);
+        const drawW=imgNaturalW*scale, drawH=imgNaturalH*scale;
+        const drawX=(cw-drawW)/2, drawY=(ch-drawH)/2;
+
+        // オフセット割合
+        const offX=drawX/cw, offY=drawY/ch;
+        const scaleX=drawW/cw, scaleY=drawH/ch;
+
+        return devices.map(d=>({
+            ...d,
+            lights: d.lights.map(lt=>({
+                ...lt,
+                left: (((parseFloat(lt.left)-offX*100)/scaleX)).toFixed(6)+'%',
+                top:  (((parseFloat(lt.top) -offY*100)/scaleY)).toFixed(6)+'%',
+            })),
+            switches: d.switches.map(sw=>({
+                ...sw,
+                left: (((parseFloat(sw.left)-offX*100)/scaleX)).toFixed(6)+'%',
+                top:  (((parseFloat(sw.top) -offY*100)/scaleY)).toFixed(6)+'%',
+            }))
+        }));
+    }
+
+    let devices=[
+        {id:"dev-1",label:"S1",isOn:false,color:50,brightness:100,lights:[{id:"l-1-1",type:"point",width:44,height:44,rotation:0,top:"40%",left:"30%"}],switches:[{id:"sw-1-1",label:"S1",shape:"square",top:"60%",left:"20%"}]},
+        {id:"dev-2",label:"S2",isOn:false,color:10,brightness:80,lights:[{id:"l-2-1",type:"point",width:44,height:44,rotation:0,top:"60%",left:"70%"},{id:"l-2-2",type:"point",width:44,height:44,rotation:0,top:"70%",left:"70%"}],switches:[{id:"sw-2-1",label:"S2",shape:"square",top:"80%",left:"60%"},{id:"sw-2-2",label:"S2'",shape:"triangle-down",top:"85%",left:"65%"}]},
+        {id:"dev-3",label:"L1",isOn:true,color:0,brightness:80,lights:[{id:"l-3-1",type:"line",width:250,height:12,rotation:0,top:"15%",left:"50%"}],switches:[{id:"sw-3-1",label:"L1",shape:"triangle-up",top:"25%",left:"50%"}]}
     ];
-    let selectedId=null, selectedSubId=null, selectedType=null, deviceCounter=4;
-    const domMap = new Map();
+    let selectedId=null,selectedSubId=null,selectedType=null,deviceCounter=4;
+    const domMap=new Map();
 
-    function migrateDevices(loaded) {
-        if (!Array.isArray(loaded)) return [];
-        return loaded.map(d => {
-            if (d.lights && Array.isArray(d.lights) && d.switches && Array.isArray(d.switches)) return d;
-            let newLights = [];
-            if (d.light) { newLights.push({id:'l-'+Date.now()+Math.random(),type:d.type||'point',width:d.width||(d.type==='line'?200:44),height:d.height||(d.type==='line'?15:44),rotation:d.rotation||0,top:d.light.top||"50%",left:d.light.left||"50%"}); }
-            else if (d.lights) { newLights = d.lights; }
-            let newSwitches = [];
-            if (d.switches) { newSwitches = d.switches; }
-            else if (d.switch) { newSwitches.push({id:'sw-'+Date.now()+Math.random(),label:d.switch.label||d.label||'S',shape:'square',top:d.switch.top||"50%",left:d.switch.left||"50%"}); }
-            return {id:d.id||"dev-"+Date.now(),label:d.label||"S",isOn:d.isOn||false,color:d.color!==undefined?d.color:50,brightness:d.brightness!==undefined?d.brightness:100,lights:newLights,switches:newSwitches};
+    function migrateDevices(loaded){
+        if(!Array.isArray(loaded))return[];
+        return loaded.map(d=>{
+            if(d.lights&&Array.isArray(d.lights)&&d.switches&&Array.isArray(d.switches))return d;
+            let nl=[];
+            if(d.light){nl.push({id:'l-'+Date.now()+Math.random(),type:d.type||'point',width:d.width||(d.type==='line'?200:44),height:d.height||(d.type==='line'?15:44),rotation:d.rotation||0,top:d.light.top||"50%",left:d.light.left||"50%"});}
+            else if(d.lights){nl=d.lights;}
+            let ns=[];
+            if(d.switches){ns=d.switches;}
+            else if(d.switch){ns.push({id:'sw-'+Date.now()+Math.random(),label:d.switch.label||d.label||'S',shape:'square',top:d.switch.top||"50%",left:d.switch.left||"50%"});}
+            return{id:d.id||"dev-"+Date.now(),label:d.label||"S",isOn:d.isOn||false,color:d.color!==undefined?d.color:50,brightness:d.brightness!==undefined?d.brightness:100,lights:nl,switches:ns};
         });
     }
 
-    async function init() {
-        try {
-            const shareId = new URLSearchParams(window.location.search).get('share');
-            if (shareId && db) {
-                document.getElementById('loading-overlay').style.display='flex';
-                await new Promise(r => { const c=setInterval(()=>{if(user){clearInterval(c);r();}},100); setTimeout(()=>{clearInterval(c);r();},3000); });
-                await loadFromCloud(shareId);
-                document.getElementById('loading-overlay').style.display='none';
-            }
-        } catch(e) { console.error(e); document.getElementById('loading-overlay').style.display='none'; }
-        if (typeof Sortable !== 'undefined') new Sortable(document.getElementById('panel-sortable'),{handle:'.block-handle',animation:150,ghostClass:'sortable-ghost'});
-        renderAll(); setupDragAndDrop(); setupPanelDragAndDrop();
+    async function init(){
+        try{
+            const shareId=new URLSearchParams(window.location.search).get('share');
+            if(shareId&&db){document.getElementById('loading-overlay').style.display='flex';await new Promise(r=>{const c=setInterval(()=>{if(user){clearInterval(c);r();}},100);setTimeout(()=>{clearInterval(c);r();},3000);});await loadFromCloud(shareId);document.getElementById('loading-overlay').style.display='none';}
+        }catch(e){console.error(e);document.getElementById('loading-overlay').style.display='none';}
+        if(typeof Sortable!=='undefined')new Sortable(document.getElementById('panel-sortable'),{handle:'.block-handle',animation:150,ghostClass:'sortable-ghost'});
+        updateLayerBounds();renderAll();setupDragAndDrop();setupPanelDragAndDrop();
     }
 
-    function renderAll() {
+    function renderAll(){
         Array.from(layer.children).forEach(c=>{if(c.id!=='dimmer-popup')c.remove();});
         domMap.clear();
-        devices.forEach(device => {
-            const lightEls=[];
-            device.lights.forEach(lt => {
-                const el=document.createElement('div'); el.className=`light ${lt.type}`;
-                el.dataset.deviceId=device.id; el.dataset.lightId=lt.id;
-                if (lt.type==='line') { const h=document.createElement('div'); h.className='rotation-handle'; h.dataset.handleFor=lt.id; el.appendChild(h); }
-                layer.appendChild(el); lightEls.push(el);
+        devices.forEach(device=>{
+            const le=[];
+            device.lights.forEach(lt=>{
+                const el=document.createElement('div');el.className=`light ${lt.type}`;el.dataset.deviceId=device.id;el.dataset.lightId=lt.id;
+                if(lt.type==='line'){const h=document.createElement('div');h.className='rotation-handle';h.dataset.handleFor=lt.id;el.appendChild(h);}
+                layer.appendChild(el);le.push(el);
             });
-            const switchEls=[];
-            device.switches.forEach(sw => {
-                const el=document.createElement('div'); el.className='switch';
-                el.dataset.deviceId=device.id; el.dataset.switchId=sw.id; el.textContent=sw.label;
-                layer.appendChild(el); switchEls.push(el);
+            const se=[];
+            device.switches.forEach(sw=>{
+                const el=document.createElement('div');el.className='switch';el.dataset.deviceId=device.id;el.dataset.switchId=sw.id;el.textContent=sw.label;
+                layer.appendChild(el);se.push(el);
             });
-            domMap.set(device.id,{lightEls,switchEls});
+            domMap.set(device.id,{lightEls:le,switchEls:se});
         });
-        updateAllDOMStyles(); updateDimmerPopupPosition();
+        updateAllDOMStyles();updateDimmerPopupPosition();
     }
 
-    function getColorRGB(v) {
-        if (v<50){let p=v/50;return{r:255,g:Math.round(170+(255-170)*p),b:Math.round(50+(255-50)*p)};}
-        else{let p=(v-50)/50;return{r:Math.round(255-(255-210)*p),g:Math.round(255-(255-230)*p),b:255};}
-    }
+    function getColorRGB(v){if(v<50){let p=v/50;return{r:255,g:Math.round(170+(255-170)*p),b:Math.round(50+(255-50)*p)};}else{let p=(v-50)/50;return{r:Math.round(255-(255-210)*p),g:Math.round(255-(255-230)*p),b:255};}}
 
-    function updateAllDOMStyles() {
-        devices.forEach(device => {
-            const els=domMap.get(device.id); if(!els) return;
-            device.lights.forEach((lt,i) => {
-                const el=els.lightEls[i]; if(!el) return;
-                el.style.top=lt.top; el.style.left=lt.left;
-                el.style.width=lt.width+'px'; el.style.height=lt.height+'px';
-                el.style.setProperty('--rotation',`${lt.rotation||0}deg`);
-                el.classList.remove('selected','active-sub');
-                if(device.id===selectedId) el.classList.add('selected');
-                if(lt.id===selectedSubId) el.classList.add('active-sub');
-                if(device.isOn){
-                    const c=getColorRGB(device.color);
-                    const alpha=(device.brightness/100)*0.7+0.1;
-                    let spread=(device.brightness/100)*15+5, blur=(device.brightness/100)*25+10;
-                    if(lt.type==='line') spread*=0.7;
-                    el.style.backgroundColor=`rgb(${c.r},${c.g},${c.b})`; el.style.borderColor='#fff';
-                    el.style.boxShadow=`0 0 ${blur}px ${spread}px rgba(${c.r},${c.g},${c.b},${alpha})`;
-                } else { el.style.backgroundColor=''; el.style.borderColor=''; el.style.boxShadow=''; }
+    function updateAllDOMStyles(){
+        devices.forEach(device=>{
+            const els=domMap.get(device.id);if(!els)return;
+            device.lights.forEach((lt,i)=>{
+                const el=els.lightEls[i];if(!el)return;
+                el.style.top=lt.top;el.style.left=lt.left;el.style.width=lt.width+'px';el.style.height=lt.height+'px';el.style.setProperty('--rotation',`${lt.rotation||0}deg`);
+                el.classList.remove('selected','active-sub');if(device.id===selectedId)el.classList.add('selected');if(lt.id===selectedSubId)el.classList.add('active-sub');
+                if(device.isOn){const c=getColorRGB(device.color);const a=(device.brightness/100)*0.7+0.1;let sp=(device.brightness/100)*15+5,bl=(device.brightness/100)*25+10;if(lt.type==='line')sp*=0.7;el.style.backgroundColor=`rgb(${c.r},${c.g},${c.b})`;el.style.borderColor='#fff';el.style.boxShadow=`0 0 ${bl}px ${sp}px rgba(${c.r},${c.g},${c.b},${a})`;}
+                else{el.style.backgroundColor='';el.style.borderColor='';el.style.boxShadow='';}
             });
-            device.switches.forEach((sw,i) => {
-                const el=els.switchEls[i]; if(!el) return;
-                el.style.top=sw.top; el.style.left=sw.left; el.dataset.shape=sw.shape||'square';
-                el.classList.remove('selected','active-sub');
-                if(device.id===selectedId) el.classList.add('selected');
-                if(sw.id===selectedSubId) el.classList.add('active-sub');
-                if(device.isOn){el.style.setProperty('--sw-bg','#4CAF50');el.style.setProperty('--sw-text','white');}
-                else{el.style.setProperty('--sw-bg','#fff');el.style.setProperty('--sw-text','#333');}
+            device.switches.forEach((sw,i)=>{
+                const el=els.switchEls[i];if(!el)return;
+                el.style.top=sw.top;el.style.left=sw.left;el.dataset.shape=sw.shape||'square';
+                el.classList.remove('selected','active-sub');if(device.id===selectedId)el.classList.add('selected');if(sw.id===selectedSubId)el.classList.add('active-sub');
+                if(device.isOn){el.style.setProperty('--sw-bg','#4CAF50');el.style.setProperty('--sw-text','white');}else{el.style.setProperty('--sw-bg','#fff');el.style.setProperty('--sw-text','#333');}
             });
         });
     }
 
-    function updateDimmerPopupPosition() {
-        if(selectedType==='switch'&&selectedSubId){
-            const device=devices.find(d=>d.id===selectedId);
-            const sw=device&&device.switches.find(s=>s.id===selectedSubId);
-            if(sw&&sw.shape==='triangle-up'){dimmerPopup.style.display='block';dimmerPopup.style.left=sw.left;dimmerPopup.style.top=sw.top;document.getElementById('popup-brightness-slider').value=device.brightness;return;}
-        }
+    function updateDimmerPopupPosition(){
+        if(selectedType==='switch'&&selectedSubId){const device=devices.find(d=>d.id===selectedId);const sw=device&&device.switches.find(s=>s.id===selectedSubId);if(sw&&sw.shape==='triangle-up'){dimmerPopup.style.display='block';dimmerPopup.style.left=sw.left;dimmerPopup.style.top=sw.top;document.getElementById('popup-brightness-slider').value=device.brightness;return;}}
         dimmerPopup.style.display='none';
     }
 
     dimmerPopup.addEventListener('mousedown',e=>e.stopPropagation());
     dimmerPopup.addEventListener('touchstart',e=>e.stopPropagation(),{passive:false});
-    document.getElementById('popup-brightness-slider').addEventListener('input',e=>{
-        if(!selectedId) return;
-        const d=devices.find(d=>d.id===selectedId);
-        if(d){d.brightness=parseInt(e.target.value);document.getElementById('brightness-slider').value=d.brightness;updateAllDOMStyles();}
-    });
+    document.getElementById('popup-brightness-slider').addEventListener('input',e=>{if(!selectedId)return;const d=devices.find(d=>d.id===selectedId);if(d){d.brightness=parseInt(e.target.value);document.getElementById('brightness-slider').value=d.brightness;updateAllDOMStyles();}});
 
-    function setupDragAndDrop() {
-        let draggingEl=null,draggingTargetType=null,draggingDevice=null,draggingSubId=null;
-        let startX=0,startY=0,isDragging=false;
-        let isRotating=false,rotatingDevice=null,rotatingLightId=null,centerX=0,centerY=0;
-        function getPos(e){return(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
-        function handleStart(e) {
+    function setupDragAndDrop(){
+        let dEl=null,dType=null,dDev=null,dSub=null,sX=0,sY=0,isDrag=false;
+        let isRot=false,rotDev=null,rotId=null,cX=0,cY=0;
+        function gp(e){return(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};}
+        function hStart(e){
             const handle=e.target.closest('.rotation-handle');
-            if(handle){isRotating=true;rotatingLightId=handle.dataset.handleFor;rotatingDevice=devices.find(d=>d.lights.some(l=>l.id===rotatingLightId));const rect=e.target.closest('.light').getBoundingClientRect();centerX=rect.left+rect.width/2;centerY=rect.top+rect.height/2;if(e.type==='touchstart')e.preventDefault();return;}
+            if(handle){isRot=true;rotId=handle.dataset.handleFor;rotDev=devices.find(d=>d.lights.some(l=>l.id===rotId));const r=e.target.closest('.light').getBoundingClientRect();cX=r.left+r.width/2;cY=r.top+r.height/2;if(e.type==='touchstart')e.preventDefault();return;}
             const target=e.target.closest('.light,.switch');
             if(!target){selectedId=null;selectedSubId=null;selectedType=null;updateControlPanel();updateAllDOMStyles();updateDimmerPopupPosition();return;}
-            selectedId=target.dataset.deviceId; draggingDevice=devices.find(d=>d.id===selectedId);
-            if(target.classList.contains('light')){selectedType=draggingTargetType='light';selectedSubId=draggingSubId=target.dataset.lightId;}
-            else{selectedType=draggingTargetType='switch';selectedSubId=draggingSubId=target.dataset.switchId;}
+            selectedId=target.dataset.deviceId;dDev=devices.find(d=>d.id===selectedId);
+            if(target.classList.contains('light')){selectedType=dType='light';selectedSubId=dSub=target.dataset.lightId;}
+            else{selectedType=dType='switch';selectedSubId=dSub=target.dataset.switchId;}
             updateControlPanel();updateAllDOMStyles();updateDimmerPopupPosition();
-            draggingEl=target;const pos=getPos(e);startX=pos.x;startY=pos.y;isDragging=false;
-            draggingEl.classList.add('dragging');if(e.type==='touchstart')e.preventDefault();
+            dEl=target;const pos=gp(e);sX=pos.x;sY=pos.y;isDrag=false;dEl.classList.add('dragging');if(e.type==='touchstart')e.preventDefault();
         }
-        function handleMove(e) {
-            if(isRotating&&rotatingDevice){
-                e.preventDefault();const pos=getPos(e);
-                let angle=Math.atan2(pos.y-centerY,pos.x-centerX)*(180/Math.PI);if(angle<0)angle+=360;
-                const lt=rotatingDevice.lights.find(l=>l.id===rotatingLightId);if(lt)lt.rotation=Math.round(angle);
-                if(selectedSubId===rotatingLightId){const s=document.getElementById('rotation-line-slider');if(s)s.value=lt.rotation;}
-                updateAllDOMStyles();return;
-            }
-            if(!draggingEl||!draggingDevice) return;
-            const pos=getPos(e);const dx=pos.x-startX;const dy=pos.y-startY;
-            if(Math.abs(dx)>3||Math.abs(dy)>3) isDragging=true;
-            if(isDragging){
+        function hMove(e){
+            if(isRot&&rotDev){e.preventDefault();const pos=gp(e);let a=Math.atan2(pos.y-cY,pos.x-cX)*(180/Math.PI);if(a<0)a+=360;const lt=rotDev.lights.find(l=>l.id===rotId);if(lt)lt.rotation=Math.round(a);if(selectedSubId===rotId){const s=document.getElementById('rotation-line-slider');if(s)s.value=lt.rotation;}updateAllDOMStyles();return;}
+            if(!dEl||!dDev)return;
+            const pos=gp(e);if(Math.abs(pos.x-sX)>3||Math.abs(pos.y-sY)>3)isDrag=true;
+            if(isDrag){
                 e.preventDefault();
-                // ★常にlayer(=コンテナ全体)基準で%計算
-                const rect=layer.getBoundingClientRect();
-                let x=Math.max(0,Math.min(pos.x-rect.left,rect.width));
-                let y=Math.max(0,Math.min(pos.y-rect.top,rect.height));
-                const leftPct=(x/rect.width)*100;const topPct=(y/rect.height)*100;
-                if(draggingTargetType==='light'){const lt=draggingDevice.lights.find(l=>l.id===draggingSubId);if(lt){lt.left=`${leftPct}%`;lt.top=`${topPct}%`;}}
-                else{const sw=draggingDevice.switches.find(s=>s.id===draggingSubId);if(sw){sw.left=`${leftPct}%`;sw.top=`${topPct}%`;}}
-                draggingEl.style.left=`${leftPct}%`;draggingEl.style.top=`${topPct}%`;
-                updateDimmerPopupPosition();
+                // ★layerのboundingRectを基準に%計算（画像描画領域基準）
+                const r=layer.getBoundingClientRect();
+                const x=Math.max(0,Math.min(pos.x-r.left,r.width));
+                const y=Math.max(0,Math.min(pos.y-r.top,r.height));
+                const lp=(x/r.width)*100,tp=(y/r.height)*100;
+                if(dType==='light'){const lt=dDev.lights.find(l=>l.id===dSub);if(lt){lt.left=`${lp}%`;lt.top=`${tp}%`;}}
+                else{const sw=dDev.switches.find(s=>s.id===dSub);if(sw){sw.left=`${lp}%`;sw.top=`${tp}%`;}}
+                dEl.style.left=`${lp}%`;dEl.style.top=`${tp}%`;updateDimmerPopupPosition();
             }
         }
-        function handleEnd() {
-            if(isRotating){isRotating=false;rotatingDevice=null;rotatingLightId=null;return;}
-            if(!draggingEl) return;
-            draggingEl.classList.remove('dragging');
-            if(!isDragging&&draggingTargetType==='switch'){draggingDevice.isOn=!draggingDevice.isOn;updateAllDOMStyles();}
-            draggingEl=null;draggingDevice=null;draggingSubId=null;
+        function hEnd(){
+            if(isRot){isRot=false;rotDev=null;rotId=null;return;}
+            if(!dEl)return;dEl.classList.remove('dragging');
+            if(!isDrag&&dType==='switch'){dDev.isOn=!dDev.isOn;updateAllDOMStyles();}
+            dEl=null;dDev=null;dSub=null;
         }
-        layer.addEventListener('mousedown',handleStart);document.addEventListener('mousemove',handleMove);document.addEventListener('mouseup',handleEnd);
-        layer.addEventListener('touchstart',handleStart,{passive:false});document.addEventListener('touchmove',handleMove,{passive:false});document.addEventListener('touchend',handleEnd);
+        layer.addEventListener('mousedown',hStart);document.addEventListener('mousemove',hMove);document.addEventListener('mouseup',hEnd);
+        layer.addEventListener('touchstart',hStart,{passive:false});document.addEventListener('touchmove',hMove,{passive:false});document.addEventListener('touchend',hEnd);
     }
 
-    function setupPanelDragAndDrop() {
+    function setupPanelDragAndDrop(){
         const panel=document.getElementById('control-panel'),handle=document.getElementById('control-handle');
-        let isDragging=false,startX,startY,initialLeft,initialTop;
-        function onDown(e){if(e.target.closest('#close-panel-btn'))return;if(!e.target.closest('#control-handle'))return;isDragging=true;const pos=(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};startX=pos.x;startY=pos.y;const rect=panel.getBoundingClientRect();initialLeft=rect.left;initialTop=rect.top;panel.style.right='auto';panel.style.bottom='auto';panel.style.left=initialLeft+'px';panel.style.top=initialTop+'px';panel.style.margin='0';if(e.type==='touchstart')e.preventDefault();}
-        function onMove(e){if(!isDragging)return;e.preventDefault();const pos=(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};panel.style.left=Math.max(0,Math.min(initialLeft+pos.x-startX,window.innerWidth-panel.offsetWidth))+'px';panel.style.top=Math.max(0,Math.min(initialTop+pos.y-startY,window.innerHeight-50))+'px';}
-        function onUp(){isDragging=false;}
+        let isDrag=false,sX,sY,iL,iT;
+        function onDown(e){if(e.target.closest('#close-panel-btn'))return;if(!e.target.closest('#control-handle'))return;isDrag=true;const pos=(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};sX=pos.x;sY=pos.y;const r=panel.getBoundingClientRect();iL=r.left;iT=r.top;panel.style.right='auto';panel.style.bottom='auto';panel.style.left=iL+'px';panel.style.top=iT+'px';panel.style.margin='0';if(e.type==='touchstart')e.preventDefault();}
+        function onMove(e){if(!isDrag)return;e.preventDefault();const pos=(e.touches&&e.touches.length>0)?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY};panel.style.left=Math.max(0,Math.min(iL+pos.x-sX,window.innerWidth-panel.offsetWidth))+'px';panel.style.top=Math.max(0,Math.min(iT+pos.y-sY,window.innerHeight-50))+'px';}
+        function onUp(){isDrag=false;}
         handle.addEventListener('mousedown',onDown);document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
         handle.addEventListener('touchstart',onDown,{passive:false});document.addEventListener('touchmove',onMove,{passive:false});document.addEventListener('touchend',onUp);
         document.getElementById('close-panel-btn').addEventListener('click',()=>{panel.style.display='none';document.getElementById('open-panel-btn').style.display='flex';});
         document.getElementById('open-panel-btn').addEventListener('click',()=>{panel.style.display='flex';document.getElementById('open-panel-btn').style.display='none';});
     }
 
-    function updateControlPanel() {
-        const editBlocks=document.querySelectorAll('.edit-block'),noSelBlock=document.getElementById('block-no-selection');
-        if(!selectedId){editBlocks.forEach(el=>el.style.display='none');noSelBlock.style.display='block';return;}
-        const device=devices.find(d=>d.id===selectedId);if(!device) return;
+    function updateControlPanel(){
+        const eb=document.querySelectorAll('.edit-block'),nb=document.getElementById('block-no-selection');
+        if(!selectedId){eb.forEach(el=>el.style.display='none');nb.style.display='block';return;}
+        const device=devices.find(d=>d.id===selectedId);if(!device)return;
         ['block-header','block-power','block-color','block-brightness','block-light-list','block-switch-list','block-delete'].forEach(id=>document.getElementById(id).style.display='block');
-        noSelBlock.style.display='none';
+        nb.style.display='none';
         document.getElementById('selected-label').textContent=device.label;
         document.getElementById('color-slider').value=device.color;
         document.getElementById('brightness-slider').value=device.brightness;
-        const activeLight=(selectedType==='light')?device.lights.find(l=>l.id===selectedSubId):null;
-        const activeSwitch=(selectedType==='switch')?device.switches.find(s=>s.id===selectedSubId):null;
-        document.getElementById('block-select-msg').style.display=(!activeLight&&!activeSwitch)?'block':'none';
-        document.getElementById('block-size-point').style.display=(activeLight&&activeLight.type==='point')?'block':'none';
-        document.getElementById('block-size-line').style.display=(activeLight&&activeLight.type==='line')?'block':'none';
-        document.getElementById('block-shape-switch').style.display=activeSwitch?'block':'none';
-        if(activeLight){if(activeLight.type==='point'){document.getElementById('size-point-slider').value=activeLight.width;}else{document.getElementById('width-line-slider').value=activeLight.width;document.getElementById('height-line-slider').value=activeLight.height;document.getElementById('rotation-line-slider').value=activeLight.rotation||0;}}
-        else if(activeSwitch){document.getElementById('shape-switch-select').value=activeSwitch.shape||'square';}
+        const aL=(selectedType==='light')?device.lights.find(l=>l.id===selectedSubId):null;
+        const aS=(selectedType==='switch')?device.switches.find(s=>s.id===selectedSubId):null;
+        document.getElementById('block-select-msg').style.display=(!aL&&!aS)?'block':'none';
+        document.getElementById('block-size-point').style.display=(aL&&aL.type==='point')?'block':'none';
+        document.getElementById('block-size-line').style.display=(aL&&aL.type==='line')?'block':'none';
+        document.getElementById('block-shape-switch').style.display=aS?'block':'none';
+        if(aL){if(aL.type==='point'){document.getElementById('size-point-slider').value=aL.width;}else{document.getElementById('width-line-slider').value=aL.width;document.getElementById('height-line-slider').value=aL.height;document.getElementById('rotation-line-slider').value=aL.rotation||0;}}
+        else if(aS){document.getElementById('shape-switch-select').value=aS.shape||'square';}
         const ll=document.getElementById('light-list');ll.innerHTML='';
-        device.lights.forEach((lt,i)=>{
-            const item=document.createElement('div');item.className='switch-list-item';
-            if(selectedType==='light'&&selectedSubId===lt.id)item.style.borderLeft='4px solid #FF5722';
-            const only=device.lights.length<=1;
-            item.innerHTML=`<span style="cursor:pointer;flex:1;" class="ll">💡 照明${i+1} (${lt.type==='line'?'ライン':'丸型'})</span><button class="btn-small" ${only?'disabled':''}>削除</button>`;
-            item.querySelector('.ll').addEventListener('click',()=>{selectedType='light';selectedSubId=lt.id;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();});
-            if(!only)item.querySelector('button').addEventListener('click',()=>{device.lights=device.lights.filter(l=>l.id!==lt.id);if(selectedSubId===lt.id)selectedSubId=device.lights[0].id;renderAll();updateControlPanel();});
-            ll.appendChild(item);
-        });
+        device.lights.forEach((lt,i)=>{const item=document.createElement('div');item.className='switch-list-item';if(selectedType==='light'&&selectedSubId===lt.id)item.style.borderLeft='4px solid #FF5722';const only=device.lights.length<=1;item.innerHTML=`<span style="cursor:pointer;flex:1;" class="ll">💡 照明${i+1} (${lt.type==='line'?'ライン':'丸型'})</span><button class="btn-small" ${only?'disabled':''}>削除</button>`;item.querySelector('.ll').addEventListener('click',()=>{selectedType='light';selectedSubId=lt.id;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();});if(!only)item.querySelector('button').addEventListener('click',()=>{device.lights=device.lights.filter(l=>l.id!==lt.id);if(selectedSubId===lt.id)selectedSubId=device.lights[0].id;renderAll();updateControlPanel();});ll.appendChild(item);});
         const sl=document.getElementById('switch-list');sl.innerHTML='';
-        device.switches.forEach((sw,i)=>{
-            const item=document.createElement('div');item.className='switch-list-item';
-            if(selectedType==='switch'&&selectedSubId===sw.id)item.style.borderLeft='4px solid #FF5722';
-            const only=device.switches.length<=1;
-            let sn=sw.shape==='triangle-down'?'(センサー)':sw.shape==='triangle-up'?'(調光)':'(通常)';
-            item.innerHTML=`<span style="cursor:pointer;flex:1;" class="sl">📍 ${sw.label} ${sn}</span><button class="btn-small" ${only?'disabled':''}>削除</button>`;
-            item.querySelector('.sl').addEventListener('click',()=>{selectedType='switch';selectedSubId=sw.id;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();});
-            if(!only)item.querySelector('button').addEventListener('click',()=>{device.switches=device.switches.filter(s=>s.id!==sw.id);if(selectedSubId===sw.id)selectedSubId=device.switches[0].id;renderAll();updateControlPanel();});
-            sl.appendChild(item);
-        });
+        device.switches.forEach((sw,i)=>{const item=document.createElement('div');item.className='switch-list-item';if(selectedType==='switch'&&selectedSubId===sw.id)item.style.borderLeft='4px solid #FF5722';const only=device.switches.length<=1;let sn=sw.shape==='triangle-down'?'(センサー)':sw.shape==='triangle-up'?'(調光)':'(通常)';item.innerHTML=`<span style="cursor:pointer;flex:1;" class="sl">📍 ${sw.label} ${sn}</span><button class="btn-small" ${only?'disabled':''}>削除</button>`;item.querySelector('.sl').addEventListener('click',()=>{selectedType='switch';selectedSubId=sw.id;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();});if(!only)item.querySelector('button').addEventListener('click',()=>{device.switches=device.switches.filter(s=>s.id!==sw.id);if(selectedSubId===sw.id)selectedSubId=device.switches[0].id;renderAll();updateControlPanel();});sl.appendChild(item);});
     }
 
     document.getElementById('toggle-power-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){d.isOn=!d.isOn;updateAllDOMStyles();}});
     document.getElementById('color-slider').addEventListener('input',e=>{const d=devices.find(d=>d.id===selectedId);if(d){d.color=parseInt(e.target.value);updateAllDOMStyles();}});
     document.getElementById('brightness-slider').addEventListener('input',e=>{const d=devices.find(d=>d.id===selectedId);if(d){d.brightness=parseInt(e.target.value);document.getElementById('popup-brightness-slider').value=d.brightness;updateAllDOMStyles();}});
-    function updateActiveLightSetting(key,value){if(selectedType!=='light'||!selectedSubId)return;const device=devices.find(d=>d.id===selectedId);const lt=device.lights.find(l=>l.id===selectedSubId);if(lt){lt[key]=value;if(key==='width'&&lt.type==='point')lt.height=value;updateAllDOMStyles();}}
-    document.getElementById('size-point-slider').addEventListener('input',e=>updateActiveLightSetting('width',parseInt(e.target.value)));
-    document.getElementById('width-line-slider').addEventListener('input',e=>updateActiveLightSetting('width',parseInt(e.target.value)));
-    document.getElementById('height-line-slider').addEventListener('input',e=>updateActiveLightSetting('height',parseInt(e.target.value)));
-    document.getElementById('rotation-line-slider').addEventListener('input',e=>updateActiveLightSetting('rotation',parseInt(e.target.value)));
+    function uALS(key,val){if(selectedType!=='light'||!selectedSubId)return;const device=devices.find(d=>d.id===selectedId);const lt=device.lights.find(l=>l.id===selectedSubId);if(lt){lt[key]=val;if(key==='width'&&lt.type==='point')lt.height=val;updateAllDOMStyles();}}
+    document.getElementById('size-point-slider').addEventListener('input',e=>uALS('width',parseInt(e.target.value)));
+    document.getElementById('width-line-slider').addEventListener('input',e=>uALS('width',parseInt(e.target.value)));
+    document.getElementById('height-line-slider').addEventListener('input',e=>uALS('height',parseInt(e.target.value)));
+    document.getElementById('rotation-line-slider').addEventListener('input',e=>uALS('rotation',parseInt(e.target.value)));
     document.getElementById('shape-switch-select').addEventListener('change',e=>{if(selectedType==='switch'&&selectedSubId){const d=devices.find(d=>d.id===selectedId);const sw=d.switches.find(s=>s.id===selectedSubId);if(sw){sw.shape=e.target.value;updateAllDOMStyles();updateControlPanel();updateDimmerPopupPosition();}}});
     document.getElementById('add-point-btn').addEventListener('click',()=>addDevice('point'));
     document.getElementById('add-line-btn').addEventListener('click',()=>addDevice('line'));
-    function addDevice(type){const newId='dev-'+Date.now();const baseLabel=(type==='line'?'L':'S')+deviceCounter++;devices.push({id:newId,label:baseLabel,isOn:true,color:50,brightness:100,lights:[{id:'l-'+Date.now(),type,width:type==='line'?200:44,height:type==='line'?15:44,rotation:0,top:"50%",left:"55%"}],switches:[{id:'sw-'+Date.now(),label:baseLabel,shape:'square',top:"50%",left:"45%"}]});selectedId=newId;selectedType='light';selectedSubId=devices[devices.length-1].lights[0].id;renderAll();updateControlPanel();updateDimmerPopupPosition();}
+    function addDevice(type){const id='dev-'+Date.now();const bl=(type==='line'?'L':'S')+deviceCounter++;devices.push({id,label:bl,isOn:true,color:50,brightness:100,lights:[{id:'l-'+Date.now(),type,width:type==='line'?200:44,height:type==='line'?15:44,rotation:0,top:"50%",left:"50%"}],switches:[{id:'sw-'+Date.now(),label:bl,shape:'square',top:"60%",left:"50%"}]});selectedId=id;selectedType='light';selectedSubId=devices[devices.length-1].lights[0].id;renderAll();updateControlPanel();updateDimmerPopupPosition();}
     document.getElementById('add-linked-point-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){const id='l-'+Date.now();d.lights.push({id,type:'point',width:44,height:44,rotation:0,top:"50%",left:"50%"});selectedType='light';selectedSubId=id;renderAll();updateControlPanel();}});
     document.getElementById('add-linked-line-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){const id='l-'+Date.now();d.lights.push({id,type:'line',width:200,height:15,rotation:0,top:"50%",left:"50%"});selectedType='light';selectedSubId=id;renderAll();updateControlPanel();}});
     document.getElementById('add-switch-btn').addEventListener('click',()=>{const d=devices.find(d=>d.id===selectedId);if(d){const id='sw-'+Date.now();d.switches.push({id,label:`${d.label}-${d.switches.length+1}`,shape:'square',top:"50%",left:"50%"});selectedType='switch';selectedSubId=id;renderAll();updateControlPanel();updateDimmerPopupPosition();}});
     document.getElementById('delete-btn').addEventListener('click',()=>{if(!selectedId||!confirm('削除しますか？'))return;devices=devices.filter(d=>d.id!==selectedId);selectedId=selectedSubId=selectedType=null;renderAll();updateControlPanel();updateDimmerPopupPosition();});
 
-    function compressImage(src,cb){const img=new Image();img.onload=()=>{let w=img.width,h=img.height,max=1200;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');ctx.fillStyle="#ffffff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);cb(canvas.toDataURL('image/jpeg',0.6));};img.onerror=()=>cb(src);img.src=src;}
+    function compressImage(src,cb){const img=new Image();img.onload=()=>{let w=img.width,h=img.height,max=1200;if(w>max||h>max){if(w>h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);cb(c.toDataURL('image/jpeg',0.6));};img.onerror=()=>cb(src);img.src=src;}
     window.pdfjsLib=window['pdfjs-dist/build/pdf']||window.pdfjsLib;
     if(window.pdfjsLib)window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     document.getElementById('bg-upload').addEventListener('change',function(e){
         const file=e.target.files[0];if(!file)return;
         document.getElementById('loading-overlay').style.display='flex';
-        if(file.type==='application/pdf'){const reader=new FileReader();reader.onload=async function(){try{const pdf=await window.pdfjsLib.getDocument(new Uint8Array(this.result)).promise;const page=await pdf.getPage(1);const viewport=page.getViewport({scale:1.5});const canvas=document.createElement('canvas');const ctx=canvas.getContext('2d');canvas.height=viewport.height;canvas.width=viewport.width;await page.render({canvasContext:ctx,viewport}).promise;compressImage(canvas.toDataURL('image/png'),compressed=>{imgEl.src=compressed;imgEl.style.display='block';document.getElementById('loading-overlay').style.display='none';});}catch(err){alert('PDFの読み込みに失敗しました。');document.getElementById('loading-overlay').style.display='none';}};reader.readAsArrayBuffer(file);}
-        else if(file.type.startsWith('image/')){const reader=new FileReader();reader.onload=function(e){compressImage(e.target.result,compressed=>{imgEl.src=compressed;imgEl.style.display='block';document.getElementById('loading-overlay').style.display='none';});};reader.readAsDataURL(file);}
+        if(file.type==='application/pdf'){const r=new FileReader();r.onload=async function(){try{const pdf=await window.pdfjsLib.getDocument(new Uint8Array(this.result)).promise;const page=await pdf.getPage(1);const vp=page.getViewport({scale:1.5});const canvas=document.createElement('canvas');canvas.height=vp.height;canvas.width=vp.width;await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;compressImage(canvas.toDataURL('image/png'),c=>{imgEl.src=c;imgEl.style.display='block';document.getElementById('loading-overlay').style.display='none';});}catch(err){alert('PDFの読み込みに失敗しました。');document.getElementById('loading-overlay').style.display='none';}};r.readAsArrayBuffer(file);}
+        else if(file.type.startsWith('image/')){const r=new FileReader();r.onload=function(e){compressImage(e.target.result,c=>{imgEl.src=c;imgEl.style.display='block';document.getElementById('loading-overlay').style.display='none';});};r.readAsDataURL(file);}
         else{alert('画像またはPDFを選択してください。');document.getElementById('loading-overlay').style.display='none';}
     });
 
     document.getElementById('share-btn').addEventListener('click',async()=>{
         if(!user||!db){alert("URL共有機能はFirebase設定が必要です。\nバックアップと復元をご利用ください。");return;}
         const btn=document.getElementById('share-btn');btn.textContent='保存中...';btn.disabled=true;
-        try{const imgSrc=imgEl.src;const docRef=db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc();await docRef.set({devices,bgImage:imgSrc.includes('placehold')?null:imgSrc,createdAt:new Date().toISOString()});document.getElementById('share-url').value=window.location.origin+window.location.pathname+'?share='+docRef.id;document.getElementById('share-link-container').style.display='block';btn.textContent='URLを生成しました';}
+        try{const src=imgEl.src;const ref=db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc();await ref.set({devices,bgImage:src.includes('placehold')?null:src,createdAt:new Date().toISOString()});document.getElementById('share-url').value=window.location.origin+window.location.pathname+'?share='+ref.id;document.getElementById('share-link-container').style.display='block';btn.textContent='URLを生成しました';}
         catch(err){alert("保存に失敗しました。");btn.textContent='URLを生成する';btn.disabled=false;}
     });
     document.getElementById('copy-btn').addEventListener('click',()=>{document.getElementById('share-url').select();document.execCommand('copy');const btn=document.getElementById('copy-btn');btn.textContent='コピー完了';setTimeout(()=>btn.textContent='コピー',2000);});
-    async function loadFromCloud(shareId){if(!user||!db)return;try{const docSnap=await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc(shareId).get();if(docSnap.exists){const data=docSnap.data();if(data.devices)devices=migrateDevices(data.devices);if(data.bgImage){imgEl.src=data.bgImage;imgEl.style.display='block';}}}catch(err){console.error(err);}}
+    async function loadFromCloud(shareId){if(!user||!db)return;try{const doc=await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc(shareId).get();if(doc.exists){const data=doc.data();if(data.devices)devices=migrateDevices(data.devices);if(data.bgImage){imgEl.src=data.bgImage;imgEl.style.display='block';}}}catch(err){console.error(err);}}
 
-    // ★★★ バックアップ書き出し ★★★
+    // ★★★ 書き出し：version=4.0 として保存 ★★★
     document.getElementById('export-btn').addEventListener('click',()=>{
-        const imgSrc=imgEl.src;
-        const dataStr="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify({devices,bgImage:imgSrc.includes('placehold')?null:imgSrc,version:"3.0"}));
-        const a=document.createElement('a');a.setAttribute("href",dataStr);a.setAttribute("download","lighting_layout.json");document.body.appendChild(a);a.click();a.remove();
+        const src=imgEl.src;
+        const data={devices,bgImage:src.includes('placehold')?null:src,version:"4.0"};
+        const a=document.createElement('a');a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(data));a.download="lighting_layout.json";document.body.appendChild(a);a.click();a.remove();
     });
 
-    // ★★★ バックアップ復元：画像ロード完了を確実に待ってから配置 ★★★
+    // ★★★ 読み込み：バージョンに応じて座標変換 ★★★
     document.getElementById('import-btn').addEventListener('click',()=>document.getElementById('import-file').click());
     document.getElementById('import-file').addEventListener('change',function(e){
         const file=e.target.files[0];if(!file)return;
         const reader=new FileReader();
-        reader.onload=function(event){
+        reader.onload=function(ev){
             try{
-                const data=JSON.parse(event.target.result);
-                if(data.devices) devices=migrateDevices(data.devices);
+                const data=JSON.parse(ev.target.result);
+                const isOldFormat = !data.version || data.version==='2.0' || data.version==='3.0';
+                let loadedDevices=migrateDevices(data.devices||[]);
                 selectedId=selectedSubId=selectedType=null;
 
                 function finalize(){
-                    renderAll();
-                    updateControlPanel();
-                    updateDimmerPopupPosition();
+                    // 旧フォーマット(v2.0/v3.0)の場合は座標変換
+                    if(isOldFormat && imgEl.naturalWidth && imgEl.naturalHeight){
+                        devices=convertOldCoords(loadedDevices, imgEl.naturalWidth, imgEl.naturalHeight);
+                    } else {
+                        devices=loadedDevices;
+                    }
+                    renderAll();updateControlPanel();updateDimmerPopupPosition();
                     alert('データを復元しました。');
                 }
 
                 if(data.bgImage){
-                    imgEl.style.display='none';
-                    imgEl.src='';
-                    const onLoaded=function(){
-                        imgEl.removeEventListener('load',onLoaded);
+                    imgEl.style.display='none';imgEl.src='';
+                    const onLoad=function(){
+                        imgEl.removeEventListener('load',onLoad);
                         imgEl.style.display='block';
-                        // ブラウザの描画確定を2フレーム待つ
-                        requestAnimationFrame(()=>requestAnimationFrame(finalize));
+                        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+                            updateLayerBounds();
+                            finalize();
+                        }));
                     };
-                    imgEl.addEventListener('load',onLoaded);
+                    imgEl.addEventListener('load',onLoad);
                     imgEl.src=data.bgImage;
                 } else {
                     finalize();

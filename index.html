@@ -168,7 +168,7 @@
     </div>
 </div>
 <script>
-    const myFirebaseConfig={apiKey:"YOUR_API_KEY",authDomain:"YOUR_PROJECT_ID.firebaseapp.com",projectId:"YOUR_PROJECT_ID",storageBucket:"YOUR_PROJECT_ID.appspot.com",messagingSenderId:"YOUR_SENDER_ID",appId:"YOUR_APP_ID"};
+    const myFirebaseConfig={apiKey:"AIzaSyDP4qn5CdLw6Bf1bogXv8NxWezR0oPiV2w",authDomain:"lighting-simulator.firebaseapp.com",projectId:"lighting-simulator",storageBucket:"lighting-simulator.firebasestorage.app",messagingSenderId:"407277961901",appId:"1:407277961901:web:3510977df257c8da53fc24"};
     const appId=typeof __app_id!=='undefined'?__app_id:'simulator-app-id';
     let auth,db,user;
     try{const ec=typeof __firebase_config!=='undefined'?__firebase_config:null;let ac=ec?JSON.parse(ec):myFirebaseConfig;if(ac&&ac.apiKey!=="YOUR_API_KEY"){firebase.initializeApp(ac);auth=firebase.auth();db=firebase.firestore();if(typeof __initial_auth_token!=='undefined'&&__initial_auth_token){auth.signInWithCustomToken(__initial_auth_token).catch(console.error);}else{auth.signInAnonymously().catch(console.error);}auth.onAuthStateChanged(u=>{user=u;});}}catch(e){console.error(e);}

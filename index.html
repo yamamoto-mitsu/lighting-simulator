@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>間取り図 照明シミュレーター</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -26,7 +26,9 @@
         .sortable-ghost { opacity:0.4; background:#f9f9f9; border:1px dashed #bbb; }
         @media (max-width:768px) { .app-container{padding:10px;} .map-section{padding:10px;} .control-section{width:calc(100% - 40px);max-height:50vh;top:auto;bottom:20px;left:20px;right:20px;} }
 
-        #map-container { position:relative; width:100%; flex:1; background-color:#fafafa; border:2px dashed #ddd; border-radius:8px; overflow:hidden; }
+        #map-container { position:relative; width:100%; flex:1; background-color:#fafafa; border:2px dashed #ddd; border-radius:8px; overflow:hidden; touch-action:none; }
+        /* zoom-wrapper: ピンチ/パンのtransform対象 */
+        #zoom-wrapper { position:absolute; top:0; left:0; width:100%; height:100%; transform-origin:0 0; will-change:transform; }
         #floorplan-img { position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
         /*
          * ★★★ 重要 ★★★
@@ -92,11 +94,13 @@
     <button id="open-panel-btn">⚙️ パネルを開く</button>
     <div class="map-section">
         <div id="map-container">
-            <img src="https://placehold.co/800x600/eeeeee/aaaaaa?text=Floor+Plan+Image" alt="間取り図" id="floorplan-img" onerror="this.style.display='none'">
-            <div id="interactive-layer">
-                <div id="dimmer-popup">
-                    <label style="font-size:0.8rem;color:#555;display:block;text-align:center;margin-bottom:5px;font-weight:bold;">明るさ調整</label>
-                    <input type="range" id="popup-brightness-slider" min="10" max="100" style="width:100%;">
+            <div id="zoom-wrapper">
+                <img src="https://placehold.co/800x600/eeeeee/aaaaaa?text=Floor+Plan+Image" alt="間取り図" id="floorplan-img" onerror="this.style.display='none'">
+                <div id="interactive-layer">
+                    <div id="dimmer-popup">
+                        <label style="font-size:0.8rem;color:#555;display:block;text-align:center;margin-bottom:5px;font-weight:bold;">明るさ調整</label>
+                        <input type="range" id="popup-brightness-slider" min="10" max="100" style="width:100%;">
+                    </div>
                 </div>
             </div>
         </div>
@@ -171,8 +175,96 @@
 
     const imgEl=document.getElementById('floorplan-img');
     const mapContainer=document.getElementById('map-container');
+    const zoomWrapper=document.getElementById('zoom-wrapper');
     const layer=document.getElementById('interactive-layer');
     const dimmerPopup=document.getElementById('dimmer-popup');
+
+    /* =====================================================
+       ★★★ ピンチズーム・パン管理 ★★★
+       zoomWrapper に CSS transform(scale + translate) をかける。
+       照明・スイッチの%データは変えず、見た目だけ拡大縮小。
+       ===================================================== */
+    let vpScale=1, vpX=0, vpY=0;
+    const MIN_SCALE=0.5, MAX_SCALE=5;
+
+    function applyTransform(){
+        zoomWrapper.style.transform=`translate(${vpX}px,${vpY}px) scale(${vpScale})`;
+    }
+
+    function clampPan(){
+        // コンテナからはみ出しすぎないように制限
+        const cw=mapContainer.clientWidth, ch=mapContainer.clientHeight;
+        const ww=cw*vpScale, wh=ch*vpScale;
+        // 右端・下端が見えなくなりすぎない程度に制限
+        vpX=Math.min(cw*0.8, Math.max(vpX, cw-ww-cw*0.8));
+        vpY=Math.min(ch*0.8, Math.max(vpY, ch-wh-ch*0.8));
+    }
+
+    function setupPinchZoom(){
+        let lastDist=0, lastMidX=0, lastMidY=0;
+        let isPinching=false;
+        // 1本指パン用
+        let isPanning=false, panSX=0, panSY=0, panStartX=0, panStartY=0;
+
+        mapContainer.addEventListener('touchstart', e=>{
+            if(e.touches.length===2){
+                isPinching=true; isPanning=false;
+                const t0=e.touches[0], t1=e.touches[1];
+                lastDist=Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
+                lastMidX=(t0.clientX+t1.clientX)/2;
+                lastMidY=(t0.clientY+t1.clientY)/2;
+                e.preventDefault();
+            }
+        },{passive:false});
+
+        mapContainer.addEventListener('touchmove', e=>{
+            if(e.touches.length===2 && isPinching){
+                e.preventDefault();
+                const t0=e.touches[0], t1=e.touches[1];
+                const dist=Math.hypot(t1.clientX-t0.clientX, t1.clientY-t0.clientY);
+                const midX=(t0.clientX+t1.clientX)/2;
+                const midY=(t0.clientY+t1.clientY)/2;
+                const rect=mapContainer.getBoundingClientRect();
+
+                // ズーム中心（コンテナ内座標）
+                const cx=midX-rect.left, cy=midY-rect.top;
+
+                const ratio=dist/lastDist;
+                const newScale=Math.min(MAX_SCALE, Math.max(MIN_SCALE, vpScale*ratio));
+
+                // 中心点を維持しながらスケール変更
+                vpX=cx - (cx-vpX)*(newScale/vpScale);
+                vpY=cy - (cy-vpY)*(newScale/vpScale);
+                vpScale=newScale;
+
+                // パンも反映
+                vpX+=midX-lastMidX;
+                vpY+=midY-lastMidY;
+
+                clampPan();
+                applyTransform();
+
+                lastDist=dist; lastMidX=midX; lastMidY=midY;
+            }
+        },{passive:false});
+
+        mapContainer.addEventListener('touchend', e=>{
+            if(e.touches.length<2) isPinching=false;
+        },{passive:true});
+
+        // ダブルタップでリセット
+        let lastTap=0;
+        mapContainer.addEventListener('touchend', e=>{
+            if(e.changedTouches.length===1){
+                const now=Date.now();
+                if(now-lastTap<300){
+                    vpScale=1; vpX=0; vpY=0;
+                    applyTransform();
+                }
+                lastTap=now;
+            }
+        },{passive:true});
+    }
 
     /* =====================================================
        ★★★ 画像の実描画領域を計算してlayerを合わせる ★★★
@@ -270,7 +362,7 @@
             if(shareId&&db){document.getElementById('loading-overlay').style.display='flex';await new Promise(r=>{const c=setInterval(()=>{if(user){clearInterval(c);r();}},100);setTimeout(()=>{clearInterval(c);r();},3000);});await loadFromCloud(shareId);document.getElementById('loading-overlay').style.display='none';}
         }catch(e){console.error(e);document.getElementById('loading-overlay').style.display='none';}
         if(typeof Sortable!=='undefined')new Sortable(document.getElementById('panel-sortable'),{handle:'.block-handle',animation:150,ghostClass:'sortable-ghost'});
-        updateLayerBounds();renderAll();setupDragAndDrop();setupPanelDragAndDrop();
+        updateLayerBounds();renderAll();setupDragAndDrop();setupPanelDragAndDrop();setupPinchZoom();
     }
 
     function renderAll(){

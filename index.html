@@ -551,10 +551,29 @@
     });
 
     document.getElementById('share-btn').addEventListener('click',async()=>{
-        if(!user||!db){alert("URL共有機能はFirebase設定が必要です。\nバックアップと復元をご利用ください。");return;}
+        if(!db){alert("Firebase設定が読み込まれていません。ページを再読み込みしてください。");return;}
         const btn=document.getElementById('share-btn');btn.textContent='保存中...';btn.disabled=true;
-        try{const src=imgEl.src;const ref=db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc();await ref.set({devices,bgImage:src.includes('placehold')?null:src,createdAt:new Date().toISOString()});document.getElementById('share-url').value=window.location.origin+window.location.pathname+'?share='+ref.id;document.getElementById('share-link-container').style.display='block';btn.textContent='URLを生成しました';}
-        catch(err){alert("保存に失敗しました。");btn.textContent='URLを生成する';btn.disabled=false;}
+        try{
+            // userがまだnullの場合は最大5秒待つ
+            if(!user){
+                await new Promise((resolve,reject)=>{
+                    const t=setTimeout(()=>reject(new Error('timeout')),5000);
+                    const unsub=auth.onAuthStateChanged(u=>{if(u){clearTimeout(t);unsub();resolve();}});
+                });
+            }
+            const src=imgEl.src;
+            const ref=db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc();
+            await ref.set({devices,bgImage:src.includes('placehold')?null:src,createdAt:new Date().toISOString()});
+            document.getElementById('share-url').value=window.location.origin+window.location.pathname+'?share='+ref.id;
+            document.getElementById('share-link-container').style.display='block';
+            btn.textContent='URLを生成しました';
+        }
+        catch(err){
+            console.error(err);
+            if(err.message==='timeout'){alert("認証がタイムアウトしました。ページを再読み込みして試してください。");}
+            else{alert("保存に失敗しました。\n"+err.message);}
+            btn.textContent='URLを生成する';btn.disabled=false;
+        }
     });
     document.getElementById('copy-btn').addEventListener('click',()=>{document.getElementById('share-url').select();document.execCommand('copy');const btn=document.getElementById('copy-btn');btn.textContent='コピー完了';setTimeout(()=>btn.textContent='コピー',2000);});
     async function loadFromCloud(shareId){if(!user||!db)return;try{const doc=await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('floorplans').doc(shareId).get();if(doc.exists){const data=doc.data();if(data.devices)devices=migrateDevices(data.devices);if(data.bgImage){imgEl.src=data.bgImage;imgEl.style.display='block';}}}catch(err){console.error(err);}}
